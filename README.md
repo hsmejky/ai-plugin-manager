@@ -8,11 +8,12 @@ Keeps Claude Code and Codex coordinated at the project level: shared instruction
 - `CLAUDE.md`: imports `AGENTS.md`.
 - `.claude/settings.json`: Claude Code plugin enablement and marketplaces.
 - `.codex/config.toml`: Codex plugin enablement.
+- `.gitignore`: excludes `.claude/worktrees/` and `.claude/settings.local.json`.
 - `docs/agents/`: agent-facing docs, listed below.
 
 ## Setting up a machine
 
-Follow the per-machine steps in [docs/agents/claude-codex-sharing.md](docs/agents/claude-codex-sharing.md): install the plugins for each host and, for Codex, trust the project.
+Follow the per-machine steps in [docs/agents/claude-codex-sharing.md](docs/agents/claude-codex-sharing.md): install the plugins for each host and, for Codex, add the marketplace and trust the project (run `codex` once in the repo and accept the trust prompt, or set `trust_level = "trusted"` for it in `~/.codex/config.toml`).
 
 ## Docs
 

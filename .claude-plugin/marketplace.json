@@ -1,0 +1,15 @@
+{
+  "name": "ai-plugin-manager",
+  "owner": {
+    "name": "Jan Smejkal"
+  },
+  "description": "Tools that keep Claude Code and Codex coordinated at the project level.",
+  "plugins": [
+    {
+      "name": "ai-plugin-manager",
+      "source": "./",
+      "description": "check-setup: verifies the shared Claude Code and Codex agent setup of a project.",
+      "category": "productivity"
+    }
+  ]
+}

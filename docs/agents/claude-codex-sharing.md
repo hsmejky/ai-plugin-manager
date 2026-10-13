@@ -29,7 +29,7 @@ The concrete plugin list lives in `.claude/settings.json` and `.codex/config.tom
 | Instructions | `CLAUDE.md` → `@AGENTS.md` | `AGENTS.md` (native) |
 | Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace and its source) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
 | Skill invocation | `/<plugin>:<skill>` | `$<plugin>:<skill>` or pick from `/skills` |
-| Manual update | `claude plugin update <plugin>@<marketplace>` | `codex plugin marketplace upgrade <marketplace>`, from the repository root |
+| Manual update | `claude plugin update <plugin>@<marketplace>` | `codex plugin marketplace upgrade <marketplace>` (run inside the trusted repository) |
 
 Install each shared plugin only from the marketplace declared for it. A same-named plugin from another marketplace (for example `claude-plugins-official` ships its own `mattpocock-skills`) is a different copy, and the hosts' versions then drift.
 
@@ -38,7 +38,7 @@ Install each shared plugin only from the marketplace declared for it. A same-nam
 **Updates.**
 
 - Claude: off by default for third-party marketplaces. The `extraKnownMarketplaces` entry sets `"autoUpdate": true`, so Claude refreshes the marketplace and updates its plugins in the background, only in interactive sessions, after the first message plus a random delay of up to 10 minutes. `claude -p` does not trigger it. Updates apply on `/reload-plugins` or the next launch. `claude plugin marketplace update <marketplace>` refreshes only the marketplace listing.
-- Codex: `codex plugin marketplace upgrade <marketplace>` refreshes a Git marketplace snapshot. Run it from the repository root; elsewhere it fails with `marketplace '<name>' is not configured as a Git marketplace`. Automatic update timing is not verified.
+- Codex: `codex plugin marketplace upgrade <marketplace>` refreshes a Git marketplace snapshot. Run it from inside the trusted repository (any subdirectory works); where the marketplace is not configured it fails with `Error: marketplace `<marketplace>` is not configured as a Git marketplace`. Automatic update timing is not verified.
 - Version drift: the plugin manifest sets `version`, and Claude updates only when that string changes, while Codex follows the git marketplace's HEAD. Short drift between releases is expected.
 
 Sources: [Claude Code: keep plugins updated](https://code.claude.com/docs/en/discover-plugins#keep-plugins-updated), [settings reference: extraKnownMarketplaces](https://code.claude.com/docs/en/settings-reference#extraknownmarketplaces); `codex plugin marketplace upgrade --help`.
@@ -49,7 +49,7 @@ Sources: [Claude Code: keep plugins updated](https://code.claude.com/docs/en/dis
 2. **Claude Code:**
    1. Run `claude` interactively in the repository and accept the workspace trust dialog. Project-scope plugins load only after trust is accepted for the repository folder itself; `-p` or trusting a parent folder is not enough.
    2. Stay in that session until `/plugin` → Marketplaces lists the marketplace. Claude registers a marketplace declared only in project settings in the background after an interactive session starts ([plugin loading](https://code.claude.com/docs/en/plugins/loading)).
-   3. Install `<plugin>@<marketplace>` from `/plugin` there, or from the shell with `claude plugin install <plugin>@<marketplace> --scope project`. Before step 2 completes, the shell command fails with `Plugin "<plugin>" not found in marketplace "<marketplace>"`. The install leaves `.claude/settings.json` unchanged.
+   3. Install `<plugin>@<marketplace>` from `/plugin` there, or from the shell with `claude plugin install <plugin>@<marketplace> --scope project`. Before step 2 completes, the shell command fails with `Plugin "<plugin>" not found in marketplace "<marketplace>"`; the `claude plugin marketplace update <marketplace>` that the error suggests does not help before the marketplace is registered (it fails with `Marketplace '<marketplace>' not found`). The install leaves the content of `.claude/settings.json` unchanged but rewrites the file with LF line endings; in a CRLF checkout (`core.autocrlf=true`) `git status` may show it modified with an empty diff. Discard that with `git checkout -- .claude/settings.json`.
    4. Fallback if the marketplace never appears: `claude plugin marketplace add <source>`, then install. Committed settings still take precedence, so `autoUpdate` applies.
 
    Cloud sessions do not load plugins enabled in `.claude/settings.json` or add its `extraKnownMarketplaces`, so plugin skills are unavailable there ([plugin loading](https://code.claude.com/docs/en/plugins/loading#plugins-shared-through-a-repository)).
@@ -60,7 +60,7 @@ Sources: [Claude Code: keep plugins updated](https://code.claude.com/docs/en/dis
       [projects.'<absolute path>']
       trust_level = "trusted"
       ```
-   2. In a trusted project, a session start fetches the declared marketplace itself (verified in an isolated `CODEX_HOME`: no `codex plugin marketplace add` needed, no user config written). If the first session started before the fetch finished, run `codex plugin marketplace upgrade <marketplace>` from the repository root.
+   2. In a trusted project, a session start fetches the declared marketplace itself (verified in an isolated `CODEX_HOME`: no `codex plugin marketplace add` needed, no user config written). On a fresh trusted machine the first `codex exec` may list `NONE` (and a first Verification run may fail) because the marketplace is fetched during that session; another session then lists the skills. Running `codex plugin marketplace upgrade <marketplace>` from inside the repository is optional.
 4. **Verify** (below).
 
 ## Verification

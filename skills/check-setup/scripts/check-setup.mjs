@@ -11,8 +11,9 @@ import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkProjectInstructions } from './checks/project-instructions.mjs';
+import { checkPluginDeclarations } from './checks/plugin-declarations.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions];
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations];
 
 export async function runChecks(env) {
   const findings = [];

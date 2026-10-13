@@ -12,7 +12,9 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkProjectInstructions } from './checks/project-instructions.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions];
+import { checkHostTrust } from './checks/host-trust.mjs';
+
+const CHECK_GROUPS = [checkProjectInstructions, checkHostTrust];
 
 export async function runChecks(env) {
   const findings = [];

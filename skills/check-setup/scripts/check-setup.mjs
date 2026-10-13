@@ -14,8 +14,9 @@ import { checkProjectInstructions } from './checks/project-instructions.mjs';
 import { checkPluginDeclarations } from './checks/plugin-declarations.mjs';
 
 import { checkHostTrust } from './checks/host-trust.mjs';
+import { checkMarketplacePlugins } from './checks/marketplace-plugins.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust];
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust, checkMarketplacePlugins];
 
 export async function runChecks(env) {
   const findings = [];

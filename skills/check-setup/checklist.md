@@ -50,3 +50,26 @@ Checked per Host, for the project root.
 - Codex: `~/.codex/config.toml` has `[projects.'<path>']` with `trust_level = "trusted"`. On Windows the path is lowercased with backslashes; on POSIX it is exact.
 Rationale: both Hosts load project-level plugin configuration only for trusted projects.
 Fix: Claude Code, run `claude` interactively in the repository and accept the workspace trust dialog. Codex, run `codex` there and accept the trust prompt, or add the table above to `~/.codex/config.toml`.
+
+### M3: declared marketplaces are registered
+
+Checked per Host, for the marketplaces the project declares (Claude `extraKnownMarketplaces`, Codex `[marketplaces.<name>]`), against `claude plugin marketplace list --json` / `codex plugin marketplace list --json` (Codex nests the list under `marketplaces`).
+Rationale: a declared marketplace is only a declaration; the plugin cannot be installed until the Host has registered it on this machine.
+Result: fail when a declared marketplace is not registered; warn when the list command fails; skip when the Host CLI is missing (M1), the Host config is missing or unreadable, or no marketplace is declared.
+Fix: `claude plugin marketplace add <owner/repo>` or `codex plugin marketplace add <git url>`, taken from the project's own declaration.
+
+### M4: expected plugins are installed and enabled from the declared marketplace
+
+Checked per Host, for the plugins that Host's own project config enables (not only the Shared plugins), against `claude plugin list --json` / `codex plugin list --json`. The id must match exactly, `plugin@marketplace`.
+- Claude: "enabled" comes from the project's `enabledPlugins`; the CLI reports `enabled: false` for plugins enabled only through project settings, so only "installed" is read from the CLI.
+- Codex: the installed entry must also report `enabled: true`.
+Rationale: a plugin that is declared but not installed does nothing, and a same-named plugin from a different marketplace is different code under the same name.
+Result: fail when a plugin is not installed, is disabled (Codex), or only a same-named plugin from another marketplace is installed; warn when the list command fails; skip as for M3, or when the Host enables no plugin.
+Fix: `claude plugin install <id>` / `codex plugin add <id>`; for a foreign same-named plugin, first `claude plugin uninstall` / `codex plugin remove` it.
+
+### M5: Shared plugin versions match across Hosts
+
+Compares the installed version of every Shared plugin (enabled by the project in both Hosts) between Claude Code and Codex.
+Rationale: different versions of one plugin make the Hosts behave differently. It is a warn because the Hosts may legitimately update at different times.
+Result: warn on any difference; skip when a Host CLI is missing, a config is unreadable, there are no Shared plugins, or none is installed in both Hosts (M4 reports that).
+Fix: update the Host with the older version (`claude plugin update <id>`, or `codex plugin remove` then `add`), refreshing the marketplace first if needed.

@@ -33,3 +33,20 @@ Fix: enable the plugin in the other Host (Codex table above; Claude `"<plugin>@<
 
 Rationale: a marketplace declared in both Hosts must resolve to the same repository, or the Hosts install different code under one name. Sources are compared after normalisation (Claude `github` + `repo` equals a Codex git URL for the same repository; `.git` suffix, scheme and case are ignored). Skip when no marketplace is declared in both.
 Fix: set one source in both configs.
+
+## Machine setup
+
+### M1: Host CLI installed and at least the tested version
+
+Checked per Host. Tested versions: Claude Code 2.1.296, codex-cli 0.160.1. Detection runs `<host> --version` (see `scripts/hosts.mjs`, `detectHosts`).
+Rationale: the setup was verified with these versions; a missing CLI cannot use the shared plugins, and an older one may behave differently.
+Result: warn when the CLI is missing, older than the tested version, or prints no parseable version; pass otherwise. When a Host is missing, its other machine checks (M2 onward) are skipped with a reason.
+Fix: install or update the CLI and put it on PATH.
+
+### M2: Project is trusted
+
+Checked per Host, for the project root.
+- Claude Code: `~/.claude.json` `projects` has an entry for the project path (forward slashes, e.g. `C:/Users/me/repo`) with `hasTrustDialogAccepted: true`. A trusted parent folder does not count.
+- Codex: `~/.codex/config.toml` has `[projects.'<path>']` with `trust_level = "trusted"`. On Windows the path is lowercased with backslashes; on POSIX it is exact.
+Rationale: both Hosts load project-level plugin configuration only for trusted projects.
+Fix: Claude Code, run `claude` interactively in the repository and accept the workspace trust dialog. Codex, run `codex` there and accept the trust prompt, or add the table above to `~/.codex/config.toml`.

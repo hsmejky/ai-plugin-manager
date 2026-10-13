@@ -13,7 +13,9 @@ import { pathToFileURL } from 'node:url';
 import { checkProjectInstructions } from './checks/project-instructions.mjs';
 import { checkPluginDeclarations } from './checks/plugin-declarations.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations];
+import { checkHostTrust } from './checks/host-trust.mjs';
+
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust];
 
 export async function runChecks(env) {
   const findings = [];

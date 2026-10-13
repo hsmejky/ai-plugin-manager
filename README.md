@@ -12,7 +12,7 @@ Keeps Claude Code and Codex coordinated at the project level: shared instruction
 
 ## Setting up a machine
 
-Follow the per-machine steps in [docs/agents/claude-codex-sharing.md](docs/agents/claude-codex-sharing.md).
+Follow the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps).
 
 ## Docs
 

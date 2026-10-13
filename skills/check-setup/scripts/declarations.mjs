@@ -3,11 +3,15 @@
 //
 // Each Host entry: { state: 'missing' | 'invalid' | 'ok', file, error?, plugins, marketplaces }
 //   plugins:      Set of 'plugin@marketplace' ids enabled by the project
-//   marketplaces: Map marketplace name -> normalized source key (see sourceKey)
+//   marketplaces: Map marketplace name -> { key, raw }
+//                 key = normalized source (see sourceKey), raw = the Host's own source object
+// The Shared plugins expected by a project are the intersection of claude.plugins and codex.plugins.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseToml } from './toml.mjs';
 
 export const CLAUDE_SETTINGS = '.claude/settings.json';
+export const CODEX_CONFIG = '.codex/config.toml';
 
 export function marketplaceOf(pluginId) {
   const at = pluginId.lastIndexOf('@');
@@ -25,14 +29,26 @@ function read(projectDir, rel, parse, build) {
   }
 }
 
+const obj = (v) => (v && typeof v === 'object' ? v : {});
+
 function buildClaude(json) {
   const plugins = new Set();
   const marketplaces = new Map();
-  const enabled = json && typeof json === 'object' ? json.enabledPlugins : undefined;
-  for (const [id, on] of Object.entries(enabled ?? {})) if (on === true) plugins.add(id);
-  const known = json && typeof json === 'object' ? json.extraKnownMarketplaces : undefined;
-  for (const [name, entry] of Object.entries(known ?? {})) {
-    marketplaces.set(name, sourceKey(entry?.source));
+  for (const [id, on] of Object.entries(obj(obj(json).enabledPlugins))) if (on === true) plugins.add(id);
+  for (const [name, entry] of Object.entries(obj(obj(json).extraKnownMarketplaces))) {
+    const raw = obj(entry).source;
+    marketplaces.set(name, { key: sourceKey(raw), raw });
+  }
+  return { plugins, marketplaces };
+}
+
+function buildCodex(toml) {
+  const plugins = new Set();
+  const marketplaces = new Map();
+  for (const [id, entry] of Object.entries(obj(toml.plugins))) if (obj(entry).enabled === true) plugins.add(id);
+  for (const [name, entry] of Object.entries(obj(toml.marketplaces))) {
+    const raw = { source: obj(entry).source_type, url: obj(entry).source };
+    marketplaces.set(name, { key: sourceKey(raw), raw });
   }
   return { plugins, marketplaces };
 }
@@ -40,12 +56,36 @@ function buildClaude(json) {
 export function loadDeclarations(projectDir) {
   return {
     claude: read(projectDir, CLAUDE_SETTINGS, JSON.parse, buildClaude),
+    codex: read(projectDir, CODEX_CONFIG, parseToml, buildCodex),
   };
 }
 
-/** Normalize a marketplace source from either Host to a comparable string, or '' if unknown. */
+function urlKey(url) {
+  return String(url)
+    .trim()
+    .replace(/^[a-z+]+:\/\//i, '')
+    .replace(/^git@([^:]+):/, '$1/')
+    .replace(/\.git$/, '')
+    .replace(/\/+$/, '')
+    .toLowerCase();
+}
+
+/**
+ * Normalize a marketplace source from either Host to a comparable string, or '' if unknown.
+ * Accepts Claude's { source: 'github', repo } / { source: 'git', url } / { source: 'directory', path }
+ * and Codex's { source: 'git'|'local', url }.
+ */
 export function sourceKey(source) {
-  if (!source || typeof source !== 'object') return '';
-  if (source.source === 'github' && source.repo) return `github.com/${source.repo}`.toLowerCase();
+  const s = obj(source);
+  if (s.source === 'github' && s.repo) return urlKey(`github.com/${s.repo}`);
+  if ((s.source === 'git' || s.source === 'url') && s.url) return urlKey(s.url);
+  if ((s.source === 'directory' || s.source === 'local') && (s.path || s.url)) {
+    return `local:${String(s.path ?? s.url).replace(/\\/g, '/').toLowerCase()}`;
+  }
   return '';
+}
+
+/** Codex `source` URL for a marketplace known by its normalized key, or '' when not derivable. */
+export function codexUrlFor(key) {
+  return key && !key.startsWith('local:') ? `https://${key}.git` : '';
 }

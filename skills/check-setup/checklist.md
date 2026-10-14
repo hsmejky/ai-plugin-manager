@@ -69,7 +69,7 @@ Fix: install or update the CLI and put it on PATH.
 
 Checked per Host, for the project root.
 - Claude Code: `~/.claude.json` `projects` has an entry for the project path (forward slashes, e.g. `C:/Users/me/repo`) with `hasTrustDialogAccepted: true`. A trusted parent folder does not count. On Windows the path match is case-insensitive, because the case of drive letter and folders varies between launches; on POSIX it is exact.
-- Codex: `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`) has `[projects.'<path>']` with `trust_level = "trusted"`. On Windows the path is lowercased with backslashes; on POSIX it is exact. `~/.codex/config.toml` is read with the repository's own TOML reader; if it cannot be parsed, the check is a warn with the parse error (trust cannot be judged), not a fail.
+- Codex: the user config (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set and non-empty, else `~/.codex/config.toml`) has `[projects.'<path>']` with `trust_level = "trusted"`. On Windows the path is lowercased with backslashes; on POSIX it is exact. The user config is read with the repository's own TOML reader; if it cannot be parsed, the check is a warn with the parse error (trust cannot be judged), not a fail.
 Rationale: both Hosts load project-level plugin configuration only for trusted projects.
 Fix: Claude Code, run `claude` interactively in the repository and accept the workspace trust dialog. Codex, run `codex` there and accept the trust prompt, or add the table above to the user config (`~/.codex/config.toml`, or `$CODEX_HOME/config.toml` when set).
 

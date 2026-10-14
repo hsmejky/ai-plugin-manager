@@ -4,12 +4,10 @@
 // project's `.codex/config.toml` overrides the user config; an untrusted project's is ignored.
 import { join } from 'node:path';
 import { parseToml } from '../toml.mjs';
-import { readText } from '../files.mjs';
+import { readText, codexHome, codexConfigLabel } from '../files.mjs';
 import { CODEX_CONFIG } from '../declarations.mjs';
 import { fail, pass, skip } from '../findings.mjs';
 import { codexTrust } from '../trust.mjs';
-import { codexHome, codexConfigLabel } from '../files.mjs';
-
 
 /** { value } with the file's `features.plugins` (undefined when unset or no file), or { error }. */
 function pluginsFlag(label, file) {

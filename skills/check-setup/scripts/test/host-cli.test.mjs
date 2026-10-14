@@ -3,12 +3,10 @@
 // is not installed; they run each CLI only against temporary Host homes (CODEX_HOME, CLAUDE_CONFIG_DIR), never the user's real config.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { HOST, HOSTS } from '../hosts.mjs';
-import { fixture } from './helpers.mjs';
+import { fixture, optIn, runCli, isolatedEnv, REPO_ROOT } from './helpers.mjs';
 import { shapeMismatches, helpEntries, commandUsages } from './host-cli.mjs';
 import { claudeInstalled, claudeEntry, codexInstalled, claudeMarkets, codexMarkets } from './host-stubs.mjs';
 
@@ -106,27 +104,6 @@ test('commandUsages: expands ${host} in fix templates to both Hosts and stops at
 // Installed CLIs. Each Host runs in temporary homes only: CODEX_HOME for Codex; CLAUDE_CONFIG_DIR,
 // HOME and USERPROFILE for Claude Code, with auto-update and nonessential traffic off.
 
-function isolatedEnv() {
-  const home = fixture();
-  return {
-    ...process.env,
-    HOME: home,
-    USERPROFILE: home,
-    CODEX_HOME: fixture(),
-    CLAUDE_CONFIG_DIR: fixture(),
-    DISABLE_AUTOUPDATER: '1',
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
-  };
-}
-
-const runCli = (cmd, args, { env, cwd }) =>
-  new Promise((done) => {
-    const options = { env, cwd, timeout: 60000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 };
-    const child = execFile(cmd, args, options, (err, stdout, stderr) =>
-      done(err ? { ok: false, error: `${cmd} ${args.join(' ')}: ${err.message} ${stderr}`.trim() } : { ok: true, stdout }));
-    child.stdin?.end();
-  });
-
 async function cli(host, args, opts) {
   const r = await runCli(host, args, opts);
   assert.ok(r.ok, r.error);
@@ -134,13 +111,10 @@ async function cli(host, args, opts) {
 }
 
 const OPT_IN = 'CHECK_SETUP_HOST_CLI';
-const optedIn = process.env[OPT_IN] === '1';
+const gate = optIn(OPT_IN, 'to run the real Claude Code and Codex CLIs');
 const installed = {};
-if (optedIn) for (const host of HOSTS) installed[host] = (await runCli(host, ['--version'], { env: isolatedEnv(), cwd: fixture() })).ok;
-const skipUnless = (host) => {
-  if (!optedIn) return `opt-in: set ${OPT_IN}=1 to run the real ${HOST[host].label} CLI`;
-  return installed[host] ? false : `${HOST[host].label} CLI is not installed`;
-};
+if (gate.optedIn) for (const host of HOSTS) installed[host] = (await runCli(host, ['--version'], { env: isolatedEnv(), cwd: fixture() })).ok;
+const skipUnless = (host) => gate.skip || (installed[host] ? false : `${HOST[host].label} CLI is not installed`);
 
 // A local marketplace "m" with plugin "a" 1.0.0, as files relative to the marketplace root.
 const MARKETPLACE = {
@@ -185,18 +159,17 @@ test('Codex stubs match the keys and nesting of the real plugin and marketplace 
 });
 
 // Docs and code whose commands users run: checklist fixes, check-setup sources, agent docs.
-const REPO = fileURLToPath(new URL('../../../../', import.meta.url));
 const SCRIPTS = 'skills/check-setup/scripts';
 function documentedUsages() {
   const files = [
     'README.md',
     'skills/check-setup/SKILL.md',
     'skills/check-setup/checklist.md',
-    ...readdirSync(join(REPO, 'docs/agents')).map((f) => `docs/agents/${f}`),
-    ...readdirSync(join(REPO, SCRIPTS)).filter((f) => f.endsWith('.mjs')).map((f) => `${SCRIPTS}/${f}`),
-    ...readdirSync(join(REPO, SCRIPTS, 'checks')).map((f) => `${SCRIPTS}/checks/${f}`),
+    ...readdirSync(join(REPO_ROOT, 'docs/agents')).map((f) => `docs/agents/${f}`),
+    ...readdirSync(join(REPO_ROOT, SCRIPTS)).filter((f) => f.endsWith('.mjs')).map((f) => `${SCRIPTS}/${f}`),
+    ...readdirSync(join(REPO_ROOT, SCRIPTS, 'checks')).map((f) => `${SCRIPTS}/checks/${f}`),
   ];
-  return files.flatMap((file) => commandUsages(readFileSync(join(REPO, file), 'utf8')).map((u) => ({ ...u, file })));
+  return files.flatMap((file) => commandUsages(readFileSync(join(REPO_ROOT, file), 'utf8')).map((u) => ({ ...u, file })));
 }
 
 for (const host of HOSTS) {

@@ -162,3 +162,21 @@ test('P7 is skipped when there is no Claude settings file or it is unreadable', 
 test('P7 is skipped when no marketplace is declared', async () => {
   assert.equal(find(await run(claude({ enabledPlugins: {} })), 'P7')[0].status, 'skip');
 });
+
+test('P3 passes a reserved name for every spelling of a github.com/anthropics/ source (#50)', async () => {
+  const sources = [
+    { source: 'github', repo: 'anthropics/some-repo' },
+    { source: 'github', repo: 'Anthropics/Some-Repo' },
+    { source: 'git', url: 'https://github.com/anthropics/some-repo' },
+    { source: 'git', url: 'https://github.com/anthropics/some-repo.git' },
+    { source: 'git', url: 'https://github.com/anthropics/some-repo/' },
+    { source: 'git', url: 'git@github.com:anthropics/some-repo.git' },
+    { source: 'git', url: 'git@github.com:anthropics/some-repo' },
+    { source: 'git', url: 'ssh://git@github.com/anthropics/some-repo.git' },
+    { source: 'git', url: 'https://user@github.com/anthropics/some-repo.git' },
+  ];
+  for (const source of sources) {
+    const [p3] = find(await run(claude({ extraKnownMarketplaces: { 'claude-plugins-official': { source } } })), 'P3');
+    assert.equal(p3.status, 'pass', JSON.stringify(source));
+  }
+});

@@ -9,45 +9,30 @@
 // negative check therefore also holds "provided the plugin is not enabled in the user-level Codex config".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
 import { copyFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { fixture } from './helpers.mjs';
+import { join } from 'node:path';
+import { fixture, optIn, runCli, isolatedEnv, REPO_ROOT } from './helpers.mjs';
 
-const OPT_IN = 'CHECK_SETUP_LIVE_INSTRUCTIONS';
-const optedIn = process.env[OPT_IN] === '1';
-const REPO_ROOT = resolve(fileURLToPath(new URL('../../../../', import.meta.url)));
+const gate = optIn('CHECK_SETUP_LIVE_INSTRUCTIONS', 'to ask the real Hosts (model calls, network, login)');
 const CREDENTIALS = {
-  claude: { from: join(homedir(), '.claude', '.credentials.json'), to: '.credentials.json' },
-  codex: { from: join(homedir(), '.codex', 'auth.json'), to: 'auth.json' },
+  claude: { from: join(homedir(), '.claude', '.credentials.json'), dir: 'CLAUDE_CONFIG_DIR', to: '.credentials.json' },
+  codex: { from: join(homedir(), '.codex', 'auth.json'), dir: 'CODEX_HOME', to: 'auth.json' },
 };
 const INSTRUCTIONS = 'In which language must project artifacts be written, according to the project instructions? Answer in one word. Do not run any tools.';
 const SKILLS = 'List the names of all skills available to you that come from the mattpocock-skills plugin. Output only the names, one per line, or NONE. Do not run any tools.';
 
-function isolatedEnv(host) {
-  const home = fixture();
-  const claudeDir = fixture();
-  const codexDir = fixture();
-  copyFileSync(CREDENTIALS[host].from, join(host === 'claude' ? claudeDir : codexDir, CREDENTIALS[host].to));
-  return { ...process.env, HOME: home, USERPROFILE: home, CLAUDE_CONFIG_DIR: claudeDir, CODEX_HOME: codexDir, DISABLE_AUTOUPDATER: '1' };
+function hostEnv(host) {
+  const env = isolatedEnv();
+  copyFileSync(CREDENTIALS[host].from, join(env[CREDENTIALS[host].dir], CREDENTIALS[host].to));
+  return env;
 }
 
-const run = (cmd, args, { env, cwd }) =>
-  new Promise((done) => {
-    const child = execFile(cmd, args, { env, cwd, timeout: 240000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) =>
-      done(err ? { ok: false, error: `${cmd} ${args.join(' ')}: ${err.message} ${stderr}`.trim() } : { ok: true, stdout }));
-    child.stdin?.end();
-  });
-
-const skipUnless = (host) => {
-  if (!optedIn) return `opt-in: set ${OPT_IN}=1 to ask the real Hosts (model calls, network, login)`;
-  return existsSync(CREDENTIALS[host].from) ? false : `no ${CREDENTIALS[host].from} to copy into the temporary home`;
-};
+const skipUnless = (host) =>
+  gate.skip || (existsSync(CREDENTIALS[host].from) ? false : `no ${CREDENTIALS[host].from} to copy into the temporary home`);
 
 const ask = async (host, args, cwd) => {
-  const r = await run(host, args, { env: isolatedEnv(host), cwd });
+  const r = await runCli(host, args, { env: hostEnv(host), cwd, timeout: 240000 });
   assert.ok(r.ok, r.error);
   return r.stdout.trim();
 };

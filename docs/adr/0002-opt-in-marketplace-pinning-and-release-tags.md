@@ -12,4 +12,4 @@ Codex follows a marketplace's git ref and Claude Code follows the manifest `vers
 
 - Claude Code's marketplace-source `ref` takes a branch or tag only, so a pin both Hosts share is a tag; Codex also accepts a full SHA.
 - The maintainer creates and pushes release tags after the bump commit is on `main`; agents never do. Lightweight tags are preferred (an annotated tag made `codex plugin marketplace upgrade` re-sync on every run in codex-cli 0.162.1).
-- `check-setup` does not warn when only one Host pins or the refs differ; that is a separate issue.
+- `check-setup` warns (P9, #34) when a marketplace declared in both Hosts is pinned differently, including when only one Host pins; it skips marketplaces whose sources differ (P6 fails those).

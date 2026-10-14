@@ -59,7 +59,7 @@ export function loadDeclarations(projectDir) {
 function urlKey(url) {
   return String(url)
     .trim()
-    .replace(/^[a-z+]+:\/\//i, '')
+    .replace(/^[a-z+]+:\/\/([^@/]*@)?/i, '')
     .replace(/^git@([^:]+):/, '$1/')
     .replace(/\.git$/, '')
     .replace(/\/+$/, '')

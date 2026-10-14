@@ -12,7 +12,12 @@ Keeps Claude Code and Codex coordinated at the project level: shared instruction
 
 ## Setting up a machine
 
-Run the setup skill (`/ai-plugin-manager:setup` in Claude Code, `$ai-plugin-manager:setup` in Codex). It shows a plan, waits for your confirmation, then registers the declared marketplaces and installs the enabled plugins in both Hosts. Trust stays manual. The [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) remain the fallback.
+The setup skill ships inside the `ai-plugin-manager` plugin, so it does not exist on a fresh machine. Bootstrap order:
+
+1. Install the plugin by hand in one Host (your choice): trust the project in that Host, then follow that Host's steps in the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) until `ai-plugin-manager@ai-plugin-manager` is installed. Trust is always manual.
+2. Run the setup skill in that Host (`/ai-plugin-manager:setup` in Claude Code, `$ai-plugin-manager:setup` in Codex). It shows a plan, waits for your confirmation, then registers the declared marketplaces and installs the enabled plugins in both Hosts. It stops for a Host whose project is not trusted, so trust the project in the other Host first.
+
+The per-machine steps can also be completed by hand for both Hosts; the skill is a shortcut, not a requirement.
 
 ## Adopting the plugin in a project
 
@@ -21,7 +26,7 @@ The plugin provides the `setup` skill (installs the declared plugins; user-invok
 1. Declare the plugin in the project (committed), as this repository does:
    - Claude Code, in `.claude/settings.json`: `"enabledPlugins": { "ai-plugin-manager@ai-plugin-manager": true }` and `"extraKnownMarketplaces": { "ai-plugin-manager": { "source": { "source": "github", "repo": "hsmejky/ai-plugin-manager" }, "autoUpdate": true } }`.
    - Codex, in `.codex/config.toml`: `[marketplaces.ai-plugin-manager]` (`source_type = "git"`, `source = "https://github.com/hsmejky/ai-plugin-manager.git"`) and `[plugins."ai-plugin-manager@ai-plugin-manager"]` with `enabled = true`.
-2. On each machine, trust the project in each Host, then run the setup skill (`/ai-plugin-manager:setup` or `$ai-plugin-manager:setup`); or complete the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) by hand.
+2. On each machine, follow the [bootstrap order](#setting-up-a-machine): install the plugin by hand in one Host, then run the setup skill (`/ai-plugin-manager:setup` or `$ai-plugin-manager:setup`); or complete the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) by hand in both Hosts.
 3. Run the setup checker (the live check is opt-in): see [running the checker](docs/agents/verification.md#run-the-setup-checker).
 4. Read the report, apply the fixes and rerun until no fail remains. See [reading the report](docs/agents/verification.md#read-the-report).
 

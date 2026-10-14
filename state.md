@@ -1,13 +1,13 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (tenth: re-review of PR #37 at `2862756`: both blockers resolved, merge-ready; #47 filed; items 5-6 added to #45; no Host release check, docs audit or watch-list scan this session; ninth: PR #37 review, #41-#46 filed, #38-#40 triaged).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (eleventh: state after PR #48 merged at `9d94837`: #36, #38, #41-#47 closed, plugin 0.4.0 with check M6 and opt-in real-CLI tests (`CHECK_SETUP_HOST_CLI=1`); PR #48 review filed #49-#51; no Host release check, docs audit or watch-list scan this session; tenth: re-review of PR #37 at `2862756`: both blockers resolved, merge-ready; #47 filed; items 5-6 added to #45; no Host release check, docs audit or watch-list scan this session; ninth: PR #37 review, #41-#46 filed, #38-#40 triaged).
 
 ## Hosts
 
 | Host        | Last processed Latest release (maintainer target per #29: Claude Code `latest` channel, newest Codex release) | Installed version at last live verification |
 | ----------- | ----------------------------- | ------------------------------------------- |
-| Claude Code | 2.1.299, newest in CHANGELOG and npm `latest` (CHANGELOG has no 2.1.297 or 2.1.298 section). Claude Code's `stable` channel is older (npm dist-tag `stable` = 2.1.287 on 2026-10-14); per #29 the maintainer targets `latest` | 2.1.299 (2026-10-14, PR #37 branch `2862756`: offline tests 145/145, `check-setup` P1-P8 and M1-M5 pass; at `31488b1`: `check-setup --live` all pass incl. P7, P8, L2; `claude -p` settings-error stderr matches the L1 stub, exit 0) |
-| Codex       | 0.162.1 (release notes 0.161.0, 0.162.0, 0.162.1; GitHub latest and npm `latest` on 2026-10-14) | 0.162.1 (2026-10-14, PR #37 branch: `check-setup --live` all pass; skills with `allow_implicit_invocation: false` absent from the list, `$<plugin>:<skill>` loads them, bare `$<skill>` does not (#45)) |
+| Claude Code | 2.1.299, newest in CHANGELOG and npm `latest` (CHANGELOG has no 2.1.297 or 2.1.298 section). Claude Code's `stable` channel is older (npm dist-tag `stable` = 2.1.287 on 2026-10-14); per #29 the maintainer targets `latest` | 2.1.299 (2026-10-14, PR #48 merged at `9d94837`: offline tests 213 pass / 4 skipped by default, 217 pass with `CHECK_SETUP_HOST_CLI=1`; CI 4/4. On this machine the plugin is 0.2.1 in Claude Code and 0.3.0 in Codex vs 0.4.0 on `main` (M5 drift, not caused by #48). Earlier, PR #37 branch `2862756`: offline tests 145/145, `check-setup` P1-P8 and M1-M5 pass; at `31488b1`: `check-setup --live` all pass incl. P7, P8, L2; `claude -p` settings-error stderr matches the L1 stub, exit 0) |
+| Codex       | 0.162.1 (release notes 0.161.0, 0.162.0, 0.162.1; GitHub latest and npm `latest` on 2026-10-14) | 0.162.1 (2026-10-14, PR #48 merged at `9d94837`: same test run as Claude Code, incl. M6 (`[features] plugins = false`). Earlier, PR #37 branch: `check-setup --live` all pass; skills with `allow_implicit_invocation: false` absent from the list, `$<plugin>:<skill>` loads them, bare `$<skill>` does not (#45)) |
 
 ## Watching
 
@@ -24,4 +24,4 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## What next
 
-20, 22, 19, 21, 23, 24, 27, 28, 29, 30, 32, 46, 38, 45, 41, 42, 43, 44, 47, 31, 34, 36, 39, 40
+49, 51, 50, 31, 34, 39, 40

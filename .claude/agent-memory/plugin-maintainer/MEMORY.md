@@ -1,0 +1,1 @@
+- [Session verification run](feedback_session_verification_run.md) — commands and order for the full Objective 1 run (~2 min); docs Checkpoints as page lists

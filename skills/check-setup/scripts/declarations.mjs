@@ -43,7 +43,7 @@ function buildCodex(toml) {
   const marketplaces = new Map();
   for (const [id, entry] of Object.entries(obj(toml.plugins))) if (obj(entry).enabled === true) plugins.add(id);
   for (const [name, entry] of Object.entries(obj(toml.marketplaces))) {
-    const raw = { source: obj(entry).source_type, url: obj(entry).source };
+    const raw = { source: obj(entry).source_type, url: obj(entry).source, ref: obj(entry).ref };
     marketplaces.set(name, { key: sourceKey(raw), raw });
   }
   return { plugins, marketplaces };

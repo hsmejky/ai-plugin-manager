@@ -265,3 +265,23 @@ test('L1 visibility: Codex flow-style policy is read too', async () => {
     assert.equal(l1Warns(fs).length, 0, yaml);
   }
 });
+
+// Two entries for the same plugin id (user scope and this project's scope): the chosen rule is that the
+// project/local entry is used, whatever the CLI order. Which entry Claude Code itself loads is unverified.
+for (const order of ['user first', 'project first']) {
+  test(`L1: with a user and a project entry for one plugin, the project entry decides (${order})`, async () => {
+    const projectDir = fixture(projectFiles);
+    const userDir = fixture(pluginFiles('.', ['stale']));
+    const projectPlugin = fixture(pluginFiles('.', ['alpha', 'beta']));
+    const homeDir = fixture();
+    const user = { id: PLUGIN, version: '1.0.0', scope: 'user', enabled: true, installPath: userDir };
+    const project = { id: PLUGIN, version: '1.0.0', scope: 'project', projectPath: projectDir, enabled: true, installPath: projectPlugin };
+    const runCommand = async (cmd, args) => {
+      if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296' : 'codex-cli 0.160.1' };
+      if (args[0] === 'plugin') return { ok: true, stdout: JSON.stringify(cmd === 'claude' ? (order === 'user first' ? [user, project] : [project, user]) : []) };
+      return { ok: true, stdout: 'alpha\nbeta\n' };
+    };
+    const findings = await runChecks(envFor(projectDir, { homeDir, runCommand, live: true }));
+    assert.equal(l1(findings, 'claude').status, 'pass');
+  });
+}

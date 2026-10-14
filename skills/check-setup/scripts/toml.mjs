@@ -4,7 +4,7 @@
 // Not supported (throws): multi-line strings/arrays, dotted keys, [[array tables]].
 // parseToml(text) -> plain object; throws Error('line N: ...') on malformed input.
 
-function splitPath(text, lineNo) {
+export function splitPath(text, lineNo) {
   const parts = [];
   let i = 0;
   const bad = () => new Error(`line ${lineNo}: bad table name`);

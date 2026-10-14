@@ -24,14 +24,18 @@ node "${CLAUDE_SKILL_DIR}/scripts/setup.mjs" plan
 ```
 
 `${CLAUDE_SKILL_DIR}` is a substitution Claude Code performs in skill content, not an environment variable. If the literal text `${CLAUDE_SKILL_DIR}` remains (Codex), use the path of this skill directory instead.
+To declare a Shared plugin in both Hosts first, add `--add <plugin>@<marketplace>` and, for a marketplace
+neither Host declares yet, `--source <owner/repo | git URL>`. Pass the same flags to `apply`. A request that would
+fail a check-setup P-check or touch a file shape the writers do not handle is refused: the output has `refused`
+(`message`) and the exit code is 2; show it and stop.
 `--project <dir>` overrides the project root (default: git top level of the current directory).
-The script prints one JSON object: `{ digest, hosts: { claude, codex }, manual, notes }`. Each Host has
+The script prints one JSON object: `{ digest, request, projectEdits, hosts: { claude, codex }, manual, notes }`. Each Host has
 `status` (`ready`, `skipped`, `stopped`), `reason`, `fix` and `steps` (`cmd`, `args`, `cwd`, `why`).
 
 ## 3. Confirm
 
 Show the plan and change nothing yet: per Host the status, and for a `ready` Host every step as the command
-line with its `why`; for a `skipped` or `stopped` Host the `reason` and `fix`; then `manual` and `notes`.
+line with its `why`; for a `skipped` or `stopped` Host the `reason` and `fix`; then `projectEdits` (per file the lines that change between `before` and `after`), `manual` and `notes`.
 Ask the user to confirm. Without a clear yes, stop.
 
 ## 4. Apply
@@ -50,6 +54,6 @@ from the skill or plugin directory: Codex may have deleted the old plugin versio
 ## 5. Report
 
 From the JSON alone: per Host the status and each step (`ok` or `failed` with `message`), Codex `changes`
-(version before and after), the `findings` with id M3 or M4 (status and fix), then every `manual` step as a
+(version before and after), the changed `projectEdits` files (the skill never commits), the `findings` with id M3, M4 or, after an edit, P3 to P9 (status and fix), then every `manual` step as a
 to-do for the user (trust, `/reload-plugins` or restart, a new Codex session). Claim nothing as done that
 is listed under `manual`.

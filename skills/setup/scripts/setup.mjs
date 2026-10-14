@@ -10,12 +10,13 @@
 //         writeFile(file, data), the only way this script writes a file.
 // Exit codes: 0 done, 1 a step or a check this skill is responsible for failed, 2 usage error or plan changed.
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runChecks, defaultRunCommand, defaultFetchJson, gitTopLevel } from '../../check-setup/scripts/check-setup.mjs';
-import { loadDeclarations, CLAUDE_SETTINGS } from '../../check-setup/scripts/declarations.mjs';
+import { loadDeclarations, parseDeclarations, CLAUDE_SETTINGS, CODEX_CONFIG } from '../../check-setup/scripts/declarations.mjs';
+import { proposeAdd } from './project-edits.mjs';
 import { detectHosts, HOST, HOSTS, compareVersions, skipUnlessRunnable } from '../../check-setup/scripts/hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, marketplaceOf } from '../../check-setup/scripts/plugins.mjs';
 import { checkCodexFeatures } from '../../check-setup/scripts/checks/codex-features.mjs';
@@ -100,7 +101,16 @@ function planCodex(env, decl, manual) {
 
 export async function planSetup(env, request = {}) {
   const hosts = await detectHosts(env);
-  const decls = loadDeclarations(env.projectDir);
+  let decls = loadDeclarations(env.projectDir);
+  let projectEdits = [];
+  if (request.add) {
+    const files = { claude: readIfExists(env.projectDir, CLAUDE_SETTINGS), codex: readIfExists(env.projectDir, CODEX_CONFIG) };
+    const proposal = await proposeAdd(env, files, request);
+    if (proposal.refused) return finish({ request, projectEdits: [], hosts: {}, manual: [], notes: [], refused: proposal.refused });
+    projectEdits = proposal.edits;
+    // Machine steps follow the declarations as they will be after the edits.
+    decls = parseDeclarations({ claudeText: textAfter(files.claude, projectEdits, CLAUDE_SETTINGS), codexText: textAfter(files.codex, projectEdits, CODEX_CONFIG) });
+  }
   const manual = [];
   const notes = [];
   const out = {};
@@ -117,10 +127,12 @@ export async function planSetup(env, request = {}) {
     }
     out[host] = host === 'claude' ? await planClaude(env, decls.claude, manual) : planCodex(env, decls.codex, manual);
   }
-  const plan = { request, projectEdits: [], hosts: out, manual, notes };
-  const digest = createHash('sha256').update(JSON.stringify(plan)).digest('hex');
-  return { digest, ...plan };
+  return finish({ request, projectEdits, hosts: out, manual, notes });
 }
+
+const finish = (plan) => ({ digest: createHash('sha256').update(JSON.stringify(plan)).digest('hex'), ...plan });
+const readIfExists = (dir, rel) => (existsSync(join(dir, rel)) ? readFileSync(join(dir, rel), 'utf8') : null);
+const textAfter = (before, edits, file) => edits.find((e) => e.file === file)?.after ?? before;
 
 // ---------------------------------------------------------------- apply
 
@@ -179,6 +191,11 @@ async function applyCodex(env, plan) {
 }
 
 export async function applySetup(env, plan) {
+  if (plan.refused) return { exit: 2, refused: plan.refused, hosts: {}, manual: [], notes: [], findings: [], responsible: [] };
+  for (const e of plan.projectEdits) {
+    mkdirSync(dirname(join(env.projectDir, e.file)), { recursive: true });
+    env.writeFile(join(env.projectDir, e.file), e.after);
+  }
   const hosts = {};
   for (const host of HOSTS) {
     const hp = plan.hosts[host];
@@ -190,7 +207,8 @@ export async function applySetup(env, plan) {
   }
   const findings = await runChecks({ ...env, live: false });
   const ran = HOSTS.filter((h) => plan.hosts[h].status === 'ready');
-  const responsible = findings.filter((f) => ['M3', 'M4'].includes(f.id) && ran.includes(f.host));
+  const edited = plan.projectEdits.length > 0;
+  const responsible = findings.filter((f) => (['M3', 'M4'].includes(f.id) && ran.includes(f.host)) || (edited && /^P[3-9]$/.test(f.id)));
   const stepFailed = HOSTS.some((h) => hosts[h].status === 'failed');
   const exit = stepFailed || responsible.some((f) => f.status === 'fail') ? 1 : 0;
   return { exit, hosts, manual: plan.manual, notes: plan.notes, findings, responsible: responsible.map((f) => f.id + ':' + f.host) };
@@ -198,21 +216,31 @@ export async function applySetup(env, plan) {
 
 // ---------------------------------------------------------------- CLI
 
-const USAGE = 'usage: setup.mjs plan [--project <dir>] | setup.mjs apply --expect <digest> [--project <dir>]';
+const USAGE = 'usage: setup.mjs plan [--add <plugin>@<marketplace> [--source <owner/repo | URL>]] [--project <dir>] | setup.mjs apply [same flags] --expect <digest>';
 
 export async function runCli(argv, env) {
   const [sub, ...rest] = argv;
   const flags = {};
   for (let i = 0; i < rest.length; i += 2) {
-    if (!['--expect', '--project'].includes(rest[i]) || rest[i + 1] === undefined) {
+    if (!['--expect', '--project', '--add', '--source'].includes(rest[i]) || rest[i + 1] === undefined) {
       return { code: 2, json: { error: `unsupported argument ${rest[i]}`, usage: USAGE } };
     }
     flags[rest[i]] = rest[i + 1];
   }
   if (sub !== 'plan' && sub !== 'apply') return { code: 2, json: { error: 'unknown subcommand', usage: USAGE } };
-  if (sub === 'plan') return { code: 0, json: await planSetup(env) };
+  const request = {};
+  if (flags['--add']) request.add = flags['--add'];
+  if (flags['--source']) {
+    if (!request.add) return { code: 2, json: { error: '--source needs --add', usage: USAGE } };
+    request.source = flags['--source'];
+  }
+  if (sub === 'plan') {
+    const plan = await planSetup(env, request);
+    return { code: plan.refused ? 2 : 0, json: plan };
+  }
   if (!flags['--expect']) return { code: 2, json: { error: 'apply needs --expect <digest>', usage: USAGE } };
-  const plan = await planSetup(env);
+  const plan = await planSetup(env, request);
+  if (plan.refused) return { code: 2, json: plan };
   if (plan.digest !== flags['--expect']) return { code: 2, json: { planChanged: true, plan } };
   const report = await applySetup(env, plan);
   return { code: report.exit, json: report };

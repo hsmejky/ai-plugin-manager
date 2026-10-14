@@ -37,7 +37,7 @@ Running a shipped part of the plugin against a Host's Latest release, either rea
 _Avoid_: Live test, smoke test, manual check
 
 **Gap**:
-A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, an unused capability, or a requested feature that has no issue or spec yet, or whose spec closed without a released version bump, release tag or docs follow-up.
+A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, an unused capability, or a requested feature that has no issue or spec yet, or whose spec in `plugin-maintainer`'s scope closed without a released version bump, release tag or docs follow-up. `plugin-maintainer`'s word for a finding in the Goal agent contract.
 _Avoid_: Drift, debt
 
 ## Goal agents

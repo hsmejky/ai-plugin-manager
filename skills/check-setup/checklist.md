@@ -36,7 +36,7 @@ Fix: set one source in both configs.
 
 ### P7: declared Claude marketplaces have `"autoUpdate": true`
 
-Rationale: Claude Code does not auto-update third-party marketplaces unless the entry sets `"autoUpdate": true`, so a project without it stays on an old plugin version while Codex follows the marketplace head (M5 drift). `claude-plugins-official` defaults to on and is exempt. Source: https://code.claude.com/docs/en/settings-reference#extraknownmarketplaces
+Rationale: Claude Code does not auto-update third-party marketplaces unless the entry sets `"autoUpdate": true`, so a project without it stays on an old plugin version while Codex follows the marketplace head (M5 drift). Auto-update is on by default for `claude-plugins-official` and the other official marketplace names except `knowledge-work-plugins` and `first-party-plugins`, but Claude Code accepts those names only for sources under `github.com/anthropics/`; those entries are exempt, a same-named entry from another source is not. P3 still exempts only `claude-plugins-official`. Sources: https://code.claude.com/docs/en/settings-reference#extraknownmarketplaces, https://code.claude.com/docs/en/discover-plugins ("Keep plugins updated") and https://code.claude.com/docs/en/plugins/security (official names), read 2026-10-14, Claude Code 2.1.299; not run live.
 Result: warn when an `extraKnownMarketplaces` entry in `.claude/settings.json` has no `"autoUpdate": true` (key missing or `false`); pass otherwise. Skip when the file is missing or unreadable (P3 reports that) or declares no marketplace that needs it.
 Fix: add `"autoUpdate": true` next to `"source"` in the named `extraKnownMarketplaces` entry.
 

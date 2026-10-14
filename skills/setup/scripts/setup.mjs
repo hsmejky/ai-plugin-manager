@@ -50,7 +50,8 @@ const step = (cmd, args, cwd, why, check) => ({ cmd, args, cwd, why, check });
 function claudeAddArg(name, raw) {
   const base = HOST.claude.marketplaceAddArg(name, raw);
   if (raw?.source === 'github' && raw.repo) return raw.ref ? `${base}#${raw.ref}` : base;
-  if (raw?.source === 'git' && raw.url && !raw.ref) return base;
+  // Live, Claude Code 2.1.299: `marketplace add <url>#<ref>` pins a git source the same way.
+  if (raw?.source === 'git' && raw.url) return raw.ref ? `${base}#${raw.ref}` : base;
   return null;
 }
 
@@ -61,20 +62,32 @@ async function planClaude(env, decl, manual) {
   const plugins = await listInstalledPlugins('claude', env);
   if (!plugins.ok) return { status: 'skipped', reason: `Could not list Claude Code plugins (${plugins.error})`, fix: '', steps: [] };
   const registered = new Set(list.marketplaces.map((m) => m.name));
+  const registeredRef = new Map(list.marketplaces.map((m) => [m.name, typeof m.ref === 'string' && m.ref !== '' ? m.ref : undefined]));
   const steps = [];
   const available = new Set(registered);
   for (const [name, entry] of decl.marketplaces) {
     if (registered.has(name) || CLAUDE_BUILTIN.has(name)) continue;
     const arg = claudeAddArg(name, entry.raw);
     if (arg === null) {
-      manual.push({ host: 'claude', what: `Marketplace "${name}" has a source form setup does not add`, fix: `claude plugin marketplace add ${HOST.claude.marketplaceAddArg(name, entry.raw)}` });
+      manual.push({ host: 'claude', what: `Marketplace "${name}" has a source form setup does not add`, fix: `claude plugin marketplace add ${HOST.claude.marketplaceAddArg(name, entry.raw)}${entry.raw?.ref ? `#${entry.raw.ref}` : ''} --scope project` });
       continue;
     }
     steps.push(step('claude', ['plugin', 'marketplace', 'add', arg, '--scope', 'project', '--json'], cwd, `register marketplace ${name}`, 'M3'));
     available.add(name);
   }
-  for (const name of decl.marketplaces.keys()) {
+  for (const [name, entry] of decl.marketplaces) {
     if (registered.has(name) && !CLAUDE_BUILTIN.has(name)) {
+      // `marketplace update` keeps the registered ref (live, 2.1.299); adding the declared source again moves it.
+      const declaredRef = typeof entry.raw?.ref === 'string' && entry.raw.ref !== '' ? entry.raw.ref : undefined;
+      if (declaredRef !== registeredRef.get(name)) {
+        const arg = claudeAddArg(name, entry.raw);
+        if (arg !== null) {
+          steps.push(step('claude', ['plugin', 'marketplace', 'add', arg, '--scope', 'project', '--json'], cwd, `move marketplace ${name} to ${declaredRef ?? 'its default branch'}`, 'M3'));
+        } else {
+          manual.push({ host: 'claude', what: `Marketplace "${name}" is registered at ref ${registeredRef.get(name) ?? '(none)'}, the project declares ${declaredRef ?? '(none)'}, and setup does not add its source form`, fix: `claude plugin marketplace add ${HOST.claude.marketplaceAddArg(name, entry.raw)}${declaredRef ? `#${declaredRef}` : ''} --scope project` });
+        }
+        continue;
+      }
       steps.push(step('claude', ['plugin', 'marketplace', 'update', name, '--json'], cwd, `refresh marketplace ${name}`, 'M3'));
     }
   }
@@ -214,7 +227,8 @@ export async function applySetup(env, plan) {
   const findings = await runChecks({ ...env, live: false });
   const ran = HOSTS.filter((h) => plan.hosts[h].status === 'ready');
   const edited = plan.projectEdits.length > 0;
-  const responsible = findings.filter((f) => (['M3', 'M4'].includes(f.id) && ran.includes(f.host)) || (edited && /^P[3-9]$/.test(f.id)));
+  const repinned = plan.request?.pin !== undefined || plan.request?.unpin !== undefined;
+  const responsible = findings.filter((f) => (['M3', 'M4'].includes(f.id) && ran.includes(f.host)) || (edited && /^P[3-9]$/.test(f.id)) || (repinned && f.id === 'M5'));
   const stepFailed = HOSTS.some((h) => hosts[h].status === 'failed');
   const exit = stepFailed || responsible.some((f) => f.status === 'fail') ? 1 : 0;
   return { exit, hosts, manual: plan.manual, notes: plan.notes, findings, responsible: responsible.map((f) => f.id + ':' + f.host) };

@@ -129,6 +129,7 @@ test('installed plugins get update steps; a pinned ref is passed to add and neve
   const done = machine({
     claudeSettings,
     registered: { claude: ['ai-plugin-manager'] },
+    registeredRefs: { claude: { 'ai-plugin-manager': 'v0.5.0' } },
     installed: { claude: { 'ai-plugin-manager@ai-plugin-manager': '0.5.0' } },
   });
   assert.deepEqual(cmds(await planSetup(done.env), 'claude'), [

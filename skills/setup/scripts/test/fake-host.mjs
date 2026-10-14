@@ -59,7 +59,8 @@ export const codexKey = (dir, platform) => (platform === 'win32' ? dir.replace(/
  *   claude / codex: Host installed (default true); trusted: { claude, codex } (default true);
  *   platform; codexEnv: set env.codexHome; failClaude(args) -> JSON failure; failCodex: Codex upgrade fails;
  *   installed: { claude: { id: version }, codex: { id: version } } already installed;
- *   registered: { claude: [names], codex: [names] } already registered; codexFeaturesOff.
+ *   registered: { claude: [names], codex: [names] } already registered; registeredRefs: { claude: { name: ref } }
+ *   the ref a registered Claude marketplace was added with (shown by `marketplace list --json`); codexFeaturesOff.
  * Returns { env, projectDir, calls, writes, settingsPath, claudeSettingsText }.
  */
 export function machine(opts = {}) {
@@ -84,6 +85,7 @@ export function machine(opts = {}) {
     claude: { marketplaces: new Set(opts.registered?.claude ?? []), plugins: { ...(opts.installed?.claude ?? {}) } },
     codex: { marketplaces: new Set(opts.registered?.codex ?? []), plugins: { ...(opts.installed?.codex ?? {}) } },
   };
+  state.claude.refs = { ...(opts.registeredRefs?.claude ?? {}) };
   const calls = [];
   const writes = [];
   const settingsPath = join(projectDir, '.claude', 'settings.json');
@@ -94,7 +96,10 @@ export function machine(opts = {}) {
 
   function claude(args) {
     const sub = args.slice(1, 3).join(' ');
-    if (sub === 'marketplace list') return json(claudeMarkets(...state.claude.marketplaces));
+    if (sub === 'marketplace list') {
+      // Real claude 2.1.299 lists `ref` for a marketplace added with one.
+      return json(claudeMarkets(...state.claude.marketplaces).map((m) => ({ ...m, ...(state.claude.refs[m.name] ? { ref: state.claude.refs[m.name] } : {}) })));
+    }
     if (sub === 'list --json' || args[1] === 'list') {
       return json(claudeInstalled(...Object.entries(state.claude.plugins).map(([id, v]) => [id, v, true])));
     }
@@ -103,6 +108,10 @@ export function machine(opts = {}) {
       const name = Object.keys(CATALOG).find((n) => CATALOG[n].claudeArg === args[3].replace(/#.*$/, ''));
       if (!name) return claudeFail('marketplace-add', args[3], 'unknown source');
       state.claude.marketplaces.add(name);
+      // Real claude 2.1.299: adding a registered marketplace again moves it to the new ref (or to none).
+      const ref = args[3].includes('#') ? args[3].replace(/^[^#]*#/, '') : undefined;
+      if (ref) state.claude.refs[name] = ref;
+      else delete state.claude.refs[name];
       const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
       delete settings.extraKnownMarketplaces[name].autoUpdate;
       writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n'); // LF, autoUpdate dropped

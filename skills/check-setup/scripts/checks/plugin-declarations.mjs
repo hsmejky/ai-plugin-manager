@@ -179,6 +179,43 @@ function checkP6({ claude, codex }) {
   );
 }
 
+const PIN_DOCS =
+  'https://github.com/hsmejky/ai-plugin-manager/blob/main/docs/agents/plugin-authoring.md#pin-a-marketplace-to-a-release';
+const FULL_SHA = /^[0-9a-f]{40}$/i;
+const refOf = (m) => (typeof m.raw?.ref === 'string' && m.raw.ref !== '' ? m.raw.ref : null);
+const show = (ref) => (ref === null ? 'not pinned' : `pinned to "${ref}"`);
+
+function pinIssue(name, c, x) {
+  if (x !== null && FULL_SHA.test(x)) {
+    return {
+      message: `Marketplace "${name}": the Codex ref is a full commit SHA ("${x}"), which Claude Code's marketplace source cannot pin (Claude Code is ${show(c)})`,
+      fix: `Pin a release tag on both Hosts instead of a SHA: set ref = "<tag>" under [marketplaces.${name}] in ${CODEX_CONFIG} and "ref": "<tag>" in "extraKnownMarketplaces.${name}.source" of ${CLAUDE_SETTINGS}.`,
+    };
+  }
+  if (c === x) return null;
+  const message = `Marketplace "${name}" is pinned differently: Codex is ${show(x)}, Claude Code is ${show(c)}, so the Hosts can run different plugin content`;
+  const claudeSet = `set "ref": "${c}" in "extraKnownMarketplaces.${name}.source" of ${CLAUDE_SETTINGS}`;
+  const codexSet = `set ref = "${x}" under [marketplaces.${name}] in ${CODEX_CONFIG}`;
+  if (c === null) return { message, fix: `Add "ref": "${x}" to "extraKnownMarketplaces.${name}.source" in ${CLAUDE_SETTINGS}, or remove ref under [marketplaces.${name}] in ${CODEX_CONFIG} to leave both unpinned.` };
+  if (x === null) return { message, fix: `Add ref = "${c}" under [marketplaces.${name}] in ${CODEX_CONFIG}, or remove "ref" from "extraKnownMarketplaces.${name}.source" in ${CLAUDE_SETTINGS} to leave both unpinned.` };
+  return { message, fix: `Use one tag on both Hosts: ${claudeSet}, or ${codexSet}.` };
+}
+
+function checkP9({ claude, codex }) {
+  const base = { id: 'P9', host: 'both', layer: 'project' };
+  const shared = [...claude.marketplaces.keys()].filter((n) => codex.marketplaces.has(n));
+  if (shared.length === 0) return skip(base, 'No marketplace is declared in both Hosts');
+  const issues = shared
+    .map((n) => pinIssue(n, refOf(claude.marketplaces.get(n)), refOf(codex.marketplaces.get(n))))
+    .filter(Boolean);
+  if (issues.length === 0) return pass(base, 'Shared marketplaces are pinned the same way in both Hosts');
+  return warn(
+    base,
+    issues.map((i) => i.message).join('; '),
+    `${issues.map((i) => i.fix).join('\n')}\nPinning docs: ${PIN_DOCS}`,
+  );
+}
+
 export async function checkPluginDeclarations(env, { decls: decl }) {
-  return [checkP3(decl.claude), checkP4(decl), checkP5(decl), checkP6(decl), checkP7(decl.claude)];
+  return [checkP3(decl.claude), checkP4(decl), checkP5(decl), checkP6(decl), checkP7(decl.claude), checkP9(decl)];
 }

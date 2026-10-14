@@ -1,4 +1,4 @@
-// P3-P6: plugin declarations in the project's Claude settings and Codex config.
+// P3-P7, P9: plugin declarations in the project's Claude settings and Codex config.
 import { pass, warn, fail, skip } from '../findings.mjs';
 import { marketplaceOf } from '../plugins.mjs';
 import { codexUrlFor, CLAUDE_SETTINGS, CODEX_CONFIG } from '../declarations.mjs';

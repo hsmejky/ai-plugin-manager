@@ -5,7 +5,9 @@
 //    fails with 401 after the upgrade, which is expected and ignored.
 //  - The old state is made by `marketplace add --ref <old full SHA>` and then changing `ref` in config to the
 //    branch; never by checking out an old commit in the marketplace root.
-//  - stdin is closed (otherwise codex waits on it) and the process must outlive the upgrade (about 16 s here).
+//  - stdin is closed (otherwise codex waits on it) and the process must outlive the upgrade. The upgrade itself
+//    takes about 2 s (docs/agents/plugin-authoring.md); the whole no-login `codex exec` run lasts about 16 s here,
+//    because the model call retries the 401 before exiting, which leaves the upgrade ample time.
 //  - The result is judged from the installed revision and the plugin cache `version`, never from the output of
 //    `codex plugin marketplace upgrade`.
 //  - Two cases: the declaration (marketplace plus enabled plugin) lives in the user config, or only in the

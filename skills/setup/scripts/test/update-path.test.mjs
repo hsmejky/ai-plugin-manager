@@ -70,6 +70,7 @@ test('a pinned marketplace: add args carry #ref, Codex args carry no ref, commit
   const done = machine({
     claudeSettings, codexConfig,
     registered: { claude: ['ai-plugin-manager'], codex: ['ai-plugin-manager'] },
+    registeredRefs: { claude: { 'ai-plugin-manager': 'v0.5.0' } },
     installed: { claude: { [ID]: '0.5.0' }, codex: { [ID]: '0.5.0' } },
   });
   const updatePlan = await planSetup(done.env);

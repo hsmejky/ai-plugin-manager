@@ -50,7 +50,8 @@ const step = (cmd, args, cwd, why, check) => ({ cmd, args, cwd, why, check });
 function claudeAddArg(name, raw) {
   const base = HOST.claude.marketplaceAddArg(name, raw);
   if (raw?.source === 'github' && raw.repo) return raw.ref ? `${base}#${raw.ref}` : base;
-  if (raw?.source === 'git' && raw.url && !raw.ref) return base;
+  // Live, Claude Code 2.1.299: `marketplace add <url>#<ref>` pins a git source the same way.
+  if (raw?.source === 'git' && raw.url) return raw.ref ? `${base}#${raw.ref}` : base;
   return null;
 }
 
@@ -61,26 +62,39 @@ async function planClaude(env, decl, manual) {
   const plugins = await listInstalledPlugins('claude', env);
   if (!plugins.ok) return { status: 'skipped', reason: `Could not list Claude Code plugins (${plugins.error})`, fix: '', steps: [] };
   const registered = new Set(list.marketplaces.map((m) => m.name));
+  const registeredRef = new Map(list.marketplaces.map((m) => [m.name, typeof m.ref === 'string' && m.ref !== '' ? m.ref : undefined]));
   const steps = [];
   const available = new Set(registered);
   for (const [name, entry] of decl.marketplaces) {
     if (registered.has(name) || CLAUDE_BUILTIN.has(name)) continue;
     const arg = claudeAddArg(name, entry.raw);
     if (arg === null) {
-      manual.push({ host: 'claude', what: `Marketplace "${name}" has a source form setup does not add`, fix: `claude plugin marketplace add ${HOST.claude.marketplaceAddArg(name, entry.raw)}` });
+      manual.push({ host: 'claude', what: `Marketplace "${name}" has a source form setup does not add`, fix: `claude plugin marketplace add ${HOST.claude.marketplaceAddArg(name, entry.raw)}${entry.raw?.ref ? `#${entry.raw.ref}` : ''} --scope project` });
       continue;
     }
     steps.push(step('claude', ['plugin', 'marketplace', 'add', arg, '--scope', 'project', '--json'], cwd, `register marketplace ${name}`, 'M3'));
     available.add(name);
   }
-  for (const name of decl.marketplaces.keys()) {
+  for (const [name, entry] of decl.marketplaces) {
     if (registered.has(name) && !CLAUDE_BUILTIN.has(name)) {
+      // `marketplace update` keeps the registered ref (live, 2.1.299); adding the declared source again moves it.
+      const declaredRef = typeof entry.raw?.ref === 'string' && entry.raw.ref !== '' ? entry.raw.ref : undefined;
+      if (declaredRef !== registeredRef.get(name)) {
+        const arg = claudeAddArg(name, entry.raw);
+        if (arg !== null) {
+          steps.push(step('claude', ['plugin', 'marketplace', 'add', arg, '--scope', 'project', '--json'], cwd, `move marketplace ${name} to ${declaredRef ?? 'its default branch'}`, 'M3'));
+        } else {
+          manual.push({ host: 'claude', what: `Marketplace "${name}" is registered at ref ${registeredRef.get(name) ?? '(none)'}, the project declares ${declaredRef ?? '(none)'}, and setup does not add its source form`, fix: `claude plugin marketplace add ${HOST.claude.marketplaceAddArg(name, entry.raw)}${declaredRef ? `#${declaredRef}` : ''} --scope project` });
+        }
+        continue;
+      }
       steps.push(step('claude', ['plugin', 'marketplace', 'update', name, '--json'], cwd, `refresh marketplace ${name}`, 'M3'));
     }
   }
   for (const id of decl.plugins) {
     if (!available.has(marketplaceOf(id))) continue;
-    const verb = plugins.plugins.some((p) => p.id === id) ? 'update' : 'install';
+    // Only an install at project or local scope is updated; a user-scope install does not satisfy the declaration.
+    const verb = plugins.plugins.some((p) => p.id === id && (p.scope === 'project' || p.scope === 'local')) ? 'update' : 'install';
     steps.push(step('claude', ['plugin', verb, id, '--scope', 'project', '--json'], cwd, `${verb} ${id}`, 'M4'));
   }
   if (steps.some((s) => ['install', 'update'].includes(s.args[1]))) {
@@ -103,9 +117,9 @@ export async function planSetup(env, request = {}) {
   const hosts = await detectHosts(env);
   let decls = loadDeclarations(env.projectDir);
   let projectEdits = [];
-  if (request.add || request.pin !== undefined || request.unpin !== undefined) {
+  if (request.add !== undefined || request.pin !== undefined || request.unpin !== undefined) {
     const files = { claude: readIfExists(env.projectDir, CLAUDE_SETTINGS), codex: readIfExists(env.projectDir, CODEX_CONFIG) };
-    const proposal = await (request.add ? proposeAdd : proposePin)(env, files, request);
+    const proposal = await (request.add !== undefined ? proposeAdd : proposePin)(env, files, request);
     if (proposal.refused) return finish({ request, projectEdits: [], hosts: {}, manual: [], notes: [], refused: proposal.refused });
     projectEdits = proposal.edits;
     // Machine steps follow the declarations as they will be after the edits.
@@ -199,7 +213,6 @@ async function applyCodex(env, plan) {
 export async function applySetup(env, plan) {
   if (plan.refused) return { exit: 2, refused: plan.refused, hosts: {}, manual: [], notes: [], findings: [], responsible: [] };
   for (const e of plan.projectEdits) {
-    mkdirSync(dirname(join(env.projectDir, e.file)), { recursive: true });
     env.writeFile(join(env.projectDir, e.file), e.after);
   }
   const hosts = {};
@@ -214,7 +227,8 @@ export async function applySetup(env, plan) {
   const findings = await runChecks({ ...env, live: false });
   const ran = HOSTS.filter((h) => plan.hosts[h].status === 'ready');
   const edited = plan.projectEdits.length > 0;
-  const responsible = findings.filter((f) => (['M3', 'M4'].includes(f.id) && ran.includes(f.host)) || (edited && /^P[3-9]$/.test(f.id)));
+  const repinned = plan.request?.pin !== undefined || plan.request?.unpin !== undefined;
+  const responsible = findings.filter((f) => (['M3', 'M4'].includes(f.id) && ran.includes(f.host)) || (edited && /^P[3-9]$/.test(f.id)) || (repinned && f.id === 'M5'));
   const stepFailed = HOSTS.some((h) => hosts[h].status === 'failed');
   const exit = stepFailed || responsible.some((f) => f.status === 'fail') ? 1 : 0;
   return { exit, hosts, manual: plan.manual, notes: plan.notes, findings, responsible: responsible.map((f) => f.id + ':' + f.host) };
@@ -235,9 +249,9 @@ export async function runCli(argv, env) {
   }
   if (sub !== 'plan' && sub !== 'apply') return { code: 2, json: { error: 'unknown subcommand', usage: USAGE } };
   const request = {};
-  if (flags['--add']) request.add = flags['--add'];
-  if (flags['--source']) {
-    if (!request.add) return { code: 2, json: { error: '--source needs --add', usage: USAGE } };
+  if (flags['--add'] !== undefined) request.add = flags['--add'];
+  if (flags['--source'] !== undefined) {
+    if (request.add === undefined) return { code: 2, json: { error: '--source needs --add', usage: USAGE } };
     request.source = flags['--source'];
   }
   if (flags['--pin'] !== undefined) request.pin = flags['--pin'];
@@ -273,7 +287,10 @@ export async function main(argv) {
     platform: process.platform,
     runCommand: defaultRunCommand,
     fetchJson: defaultFetchJson,
-    writeFile: (file, data) => writeFileSync(file, data),
+    writeFile: (file, data) => {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, data);
+    },
   };
   const { code, json } = await runCli(args, env);
   process.stdout.write(JSON.stringify(json, null, 2) + '\n');

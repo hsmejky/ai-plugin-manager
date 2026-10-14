@@ -260,19 +260,64 @@ test('M5 fix names only commands that exist, per Host', async () => {
   assert.doesNotMatch(claudeOlder, /<host>/);
 });
 
-test('M5 does not crash when one Host reports no version, and gives fix text for both Hosts (#20)', async () => {
+const m5With = async (claude, codex) => {
+  const r = await run(files(['a@m']), {
+    claude: { plugins: claudeInstalled(['a@m', claude]), markets: claudeMarkets('m') },
+    codex: { plugins: codexInstalled(['a@m', codex]), markets: codexMarkets('m') },
+  });
+  return find(r, 'M5')[0];
+};
+
+test('M5 cannot compare when one Host reports no version: no upgrade fix, fix is to set a manifest version (#47)', async () => {
   for (const [claude, codex] of [[null, '1.4.0'], ['1.3.1', null]]) {
-    const r = await run(files(['a@m']), {
-      claude: { plugins: claudeInstalled(['a@m', claude]), markets: claudeMarkets('m') },
-      codex: { plugins: codexInstalled(['a@m', codex]), markets: codexMarkets('m') },
-    });
-    const [f] = find(r, 'M5');
+    const f = await m5With(claude, codex);
     assert.equal(f.status, 'warn');
+    assert.match(f.message, /cannot compare/i);
     assert.match(f.message, /a@m/);
-    assert.doesNotMatch(f.message, /null|undefined/);
-    assert.match(f.fix, /claude plugin update a@m/);
-    assert.match(f.fix, /codex plugin marketplace upgrade m/);
+    assert.doesNotMatch(f.message, /null|undefined|drift/i);
+    assert.match(f.fix, /version/);
+    assert.match(f.fix, /manifest/);
+    assert.doesNotMatch(f.fix, /plugin update|marketplace (update|upgrade)/);
   }
+});
+
+test('M5 does not pass when neither Host reports a version (#47)', async () => {
+  const f = await m5With(null, null);
+  assert.equal(f.status, 'warn');
+  assert.match(f.message, /cannot compare/i);
+  assert.match(f.message, /neither/i);
+  assert.match(f.fix, /manifest/);
+});
+
+test('M5 cannot compare SHA-like or <semver>-<sha> versions, and says why (#47)', async () => {
+  for (const [claude, codex] of [['5f7cd798dc99', '1.4.0'], ['0.1.12-5f7cd798dc99', '0.1.12'], ['1.0.0', 'local']]) {
+    const f = await m5With(claude, codex);
+    assert.equal(f.status, 'warn');
+    assert.match(f.message, /cannot compare/i);
+    assert.match(f.message, /release number/i);
+    assert.doesNotMatch(f.fix, /plugin update|marketplace (update|upgrade)/);
+  }
+});
+
+test('M5 passes when both Hosts report the same non-release version string (#47)', async () => {
+  assert.equal((await m5With('0.1.12-5f7cd798dc99', '0.1.12-5f7cd798dc99')).status, 'pass');
+});
+
+test('M5 reports real drift and uncomparable plugins together (#47)', async () => {
+  const f = {
+    ...claudeFiles(['a@m', 'b@m'], { m: 'o/m' }),
+    ...codexFiles(['a@m', 'b@m'], { m: 'https://github.com/o/m.git' }),
+  };
+  const r = await run(f, {
+    claude: { plugins: claudeInstalled(['a@m', '1.3.1'], ['b@m', null]), markets: claudeMarkets('m') },
+    codex: { plugins: codexInstalled(['a@m', '1.4.0'], ['b@m', null]), markets: codexMarkets('m') },
+  });
+  const [m5] = find(r, 'M5');
+  assert.equal(m5.status, 'warn');
+  assert.match(m5.message, /a@m.*1\.3\.1.*1\.4\.0/);
+  assert.match(m5.message, /b@m/);
+  assert.match(m5.fix, /claude plugin update a@m/);
+  assert.match(m5.fix, /manifest/);
 });
 
 test('M5 only compares Shared plugins (intersection)', async () => {

@@ -4,6 +4,7 @@ import { warn, fail, pass, skip } from '../findings.mjs';
 import { HOST, HOSTS, compareVersions, skipUnlessRunnable } from '../hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
 
+const RELEASE = /^\d+\.\d+\.\d+$/;
 const NO_MANIFEST = /marketplace root does not contain a supported manifest/i;
 
 /** Fix for a failed list command: specific when Codex reports a marketplace without a manifest. */
@@ -90,30 +91,52 @@ async function checkM5(decls, hostInfos, env) {
     if (!lists[h].ok) return skip(base, `Could not list ${HOST[h].label} plugins (see M4)`);
   }
   const drift = [];
+  const unknown = [];
   let compared = 0;
   for (const id of shared) {
     const inClaude = lists.claude.plugins.find((p) => p.id === id);
     const inCodex = lists.codex.plugins.find((p) => p.id === id);
     if (!inClaude || !inCodex) continue; // M4 reports a missing install
     compared++;
-    if (inClaude.version !== inCodex.version) drift.push({ id, claude: inClaude.version, codex: inCodex.version });
+    const c = inClaude.version;
+    const x = inCodex.version;
+    if (c != null && c === x) continue; // identical strings: nothing to compare
+    if (RELEASE.test(c ?? '') && RELEASE.test(x ?? '')) drift.push({ id, claude: c, codex: x });
+    else unknown.push({ id, claude: c, codex: x });
   }
   if (compared === 0) return skip(base, 'No Shared plugin is installed in both Hosts (see M4)');
-  if (drift.length === 0) return pass(base, 'Shared plugins have the same version in both Hosts');
-  return warn(
-    base,
-    `Version drift: ${drift.map((d) => `${d.id} is ${d.claude ?? 'an unknown version'} in Claude Code and ${d.codex ?? 'an unknown version'} in Codex`).join('; ')}`,
-    drift
-      .map((d) => {
-        const m = marketplaceOf(d.id);
-        const claudeFix = `Claude Code has the older ${d.id}: run \`claude plugin marketplace update ${m}\` then \`claude plugin update ${d.id}\`, and restart Claude Code.`;
-        const codexFix = `Codex has the older ${d.id}: start a Codex session in the project (it upgrades the marketplace at start), or run \`codex plugin marketplace upgrade ${m}\` from the project.`;
-        // A Host that reports no version cannot be ordered: give the fix for both.
-        const cmp = d.claude && d.codex ? compareVersions(d.claude, d.codex) : 0;
-        return cmp < 0 ? claudeFix : cmp > 0 ? codexFix : `${claudeFix}\n${codexFix}`;
-      })
-      .join('\n'),
-  );
+  if (drift.length === 0 && unknown.length === 0) return pass(base, 'Shared plugins have the same version in both Hosts');
+  const show = (v) => (v == null ? 'no version' : `"${v}"`);
+  const messages = [];
+  const fixes = [];
+  if (drift.length > 0) {
+    messages.push(
+      `Version drift: ${drift.map((d) => `${d.id} is ${d.claude} in Claude Code and ${d.codex} in Codex`).join('; ')}`,
+    );
+    for (const d of drift) {
+      const m = marketplaceOf(d.id);
+      const claudeFix = `Claude Code has the older ${d.id}: run \`claude plugin marketplace update ${m}\` then \`claude plugin update ${d.id}\`, and restart Claude Code.`;
+      const codexFix = `Codex has the older ${d.id}: start a Codex session in the project (it upgrades the marketplace at start), or run \`codex plugin marketplace upgrade ${m}\` from the project.`;
+      const cmp = compareVersions(d.claude, d.codex);
+      fixes.push(cmp < 0 ? claudeFix : cmp > 0 ? codexFix : `${claudeFix}\n${codexFix}`);
+    }
+  }
+  if (unknown.length > 0) {
+    const items = unknown.map((u) => {
+      const why =
+        u.claude == null && u.codex == null
+          ? 'neither Host reports a version'
+          : `Claude Code reports ${show(u.claude)}, Codex reports ${show(u.codex)}`;
+      return `${u.id} (${why})`;
+    });
+    messages.push(
+      `Cannot compare versions (a Host reports no version, or one that is not a release number like 1.2.3): ${items.join('; ')}`,
+    );
+    fixes.push(
+      `Upgrading cannot clear this. Set a release \`version\` (for example "1.2.3") in the manifest of ${unknown.map((u) => u.id).join(', ')} (\`.claude-plugin/plugin.json\` and the Codex manifest) and publish it, so both Hosts report the same release number; or ignore this warning if you accept unversioned plugins.`,
+    );
+  }
+  return warn(base, messages.join('. '), fixes.join('\n'));
 }
 
 export async function checkMarketplacePlugins(env, { hosts, decls }) {

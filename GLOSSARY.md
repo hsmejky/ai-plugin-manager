@@ -24,6 +24,10 @@ _Avoid_: Local setup, user config, environment
 The newest published release of a Host on the release channel being followed.
 _Avoid_: Current stable release
 
+**Live verification**:
+Running a shipped part of the plugin against a Host's Latest release, either read-only on the real machine or writing only to a temporary Host home and a temporary copy of a project.
+_Avoid_: Live test, smoke test, manual check
+
 **Gap**:
-A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, or an unused capability.
+A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, an unused capability, or a requested feature not yet released.
 _Avoid_: Drift, debt

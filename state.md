@@ -1,6 +1,6 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (fourth: #29 triaged after the user's decisions; still needs-info on severity and Homebrew/package-manager channels. No new Host release: npm `latest` 2.1.299 and 0.162.1, installed Hosts the same, so objectives 1-4 carry over from the second session).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (fourth: #29 triaged after the user's decisions; then decided (warn; message names the assumed channel), now ready-for-agent. No new Host release: npm `latest` 2.1.299 and 0.162.1, installed Hosts the same, so objectives 1-4 carry over from the second session).
 
 ## Hosts
 

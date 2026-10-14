@@ -28,6 +28,11 @@ Before changing agent instructions or deciding what is shared between the Hosts,
 Before changing skills, manifests, or plugin setup, read `docs/agents/plugin-authoring.md`.
 It ends with verifying the setup per `docs/agents/verification.md`.
 
+### Goal agents
+
+Goal agent contract and the Goal agents in this repo: see `docs/agents/goal-agents.md`.
+Goal agents are Claude Code subagents (`.claude/agents/`); Codex does not run them.
+
 ## Plugin versioning
 
 Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Tag that commit `v<version>` (for example `v0.5.0`) once it is on `main`; the maintainer creates and pushes the tag, agents never do ([release tags](docs/agents/plugin-authoring.md#release-tags)). Codex follows the marketplace HEAD at each Codex start, or the `ref` of a pinned marketplace ([pinning](docs/agents/plugin-authoring.md#pin-a-marketplace-to-a-release)), and has no manifest here; bump any Codex manifest added later in the same commit.

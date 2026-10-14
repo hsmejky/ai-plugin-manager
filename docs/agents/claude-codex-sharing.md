@@ -34,7 +34,7 @@ The Project setup each Host reads:
 | | Claude Code | Codex |
 |---|---|---|
 | Instructions | `CLAUDE.md` → `@AGENTS.md` | `AGENTS.md` (native) |
-| Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace, its source and `"autoUpdate": true`) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
+| Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace, its source and `"autoUpdate": true`; optional `ref`, branch or tag, [opt-in pinning](plugin-authoring.md#pin-a-marketplace-to-a-release)) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; optional `ref`, branch, tag or full SHA, never a short SHA; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
 
 Install each Shared plugin only from the marketplace declared for it. A same-named plugin from another marketplace (for example `claude-plugins-official` ships its own `mattpocock-skills`) is a different copy, and the Hosts' versions then drift.
 

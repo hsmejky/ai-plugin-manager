@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,6 +68,13 @@ export function isolatedEnv() {
     DISABLE_AUTOUPDATER: '1',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
   };
+}
+
+/** Delete the temporary homes of an isolatedEnv() result and everything in them. Throws if one remains. */
+export function removeIsolated(env) {
+  for (const key of ['HOME', 'CODEX_HOME', 'CLAUDE_CONFIG_DIR']) {
+    rmSync(env[key], { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  }
 }
 
 export const find =(findings, id) => findings.filter((f) => f.id === id);

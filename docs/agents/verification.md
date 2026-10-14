@@ -9,7 +9,7 @@ The `check-setup` skill verifies both Hosts and needs Node.js 20 or later. Run i
 - Claude Code: `/ai-plugin-manager:check-setup`
 - Codex: `$ai-plugin-manager:check-setup`
 
-The live checks are opt-in and run only when you ask for them ("live check", or the argument `live`). L1 makes one model call per Host and plugin and needs network and authentication. L2 (latest release) makes no model call but needs npm and network. A skipped live check reflects a network, authentication or sandbox limit, not a broken setup.
+The live checks are opt-in and run only when you ask for them ("live check", or the argument `live`). L1 makes one model call per Host and plugin and needs network and authentication. L2 (latest release) makes no model call; it reads the npm registry over HTTPS and needs network (no npm process). A skipped live check reflects a network, authentication or sandbox limit, not a broken setup.
 
 ## Read the report
 

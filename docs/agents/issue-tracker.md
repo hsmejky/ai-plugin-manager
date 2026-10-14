@@ -44,3 +44,24 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+
+## Goal agent operations
+
+Used by Goal agents (see `docs/agents/goal-agents.md`). Issues labelled
+`goal-agent:*`, like `wayfinder:*` issues, are not triage work.
+
+- **State label**: `goal-agent:state`. Each Goal agent's scope label is
+  `goal-agent:<name>`, listed in `docs/agents/goal-agents.md`.
+- **Create a missing label** (only one named in `goal-agents.md`):
+  `gh label create goal-agent:<name> --description "Scope of the <name> Goal agent"`.
+- **Find the State issue**: `gh issue list --state open --label goal-agent:state --json number,title --jq '.[] | select(.title | contains("<name>"))'`.
+  None: create it. More than one: stop and ask.
+- **Create the State issue**: `gh issue create --title "<name> Goal agent: state" --label goal-agent:state --body-file <file>`
+  with the sections `## Order`, `## Deferred items`, `## Checkpoints`.
+- **Update the State issue**: read the body right before writing
+  (`gh issue view <n> --json body --jq .body`), edit it, then
+  `gh issue edit <n> --body-file <file>`.
+- **Issues in scope**: `gh issue list --state open --label goal-agent:<name> --json number,title,labels,body`.
+- **Close an own issue before triage**: `gh issue close <n> --comment "<marked comment>"`.
+- **Blocking edges** between the agent's own flat issues: as in Wayfinding
+  operations, **Blocking**.

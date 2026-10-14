@@ -73,3 +73,14 @@ Compares the installed version of every Shared plugin (enabled by the project in
 Rationale: different versions of one plugin make the Hosts behave differently. It is a warn because the Hosts may legitimately update at different times.
 Result: warn on any difference; skip when a Host CLI is missing, a config is unreadable, there are no Shared plugins, or none is installed in both Hosts (M4 reports that).
 Fix: update the Host with the older version (`claude plugin update <id>`, or `codex plugin remove` then `add`), refreshing the marketplace first if needed.
+
+## Live check (opt-in)
+
+Runs only with `--live`, which the skill passes only when the user explicitly asks for a live check. Without it no model call is made and no L1 finding appears. It needs network and authentication in each Host.
+
+### L1: each Host lists the expected skills
+
+Checked per Host, for every plugin the Host's project config enables and that is installed (M4 reports the rest). The expected skills come from the installed plugin: Claude Code from the manifest `skills` array (else `skills/*/SKILL.md`) under `installPath` of `claude plugin list --json`; Codex from `~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`. Skills with `disable-model-invocation: true` are user-only and not expected. Each Host is asked, per plugin and from the project root, with the prompt of `docs/agents/claude-codex-sharing.md` (Verification): `claude -p "..."` (never `--bare`, which skips plugin sync) and `codex exec --skip-git-repo-check "..."`. Claude Code has no flag that lists skills, hence the model call.
+Rationale: confirms end to end that the Host actually sees the plugin's skills, which the static checks cannot prove.
+Result: pass when every expected skill is named in the reply; fail when any is missing (including a reply of `NONE`); skip with the reason when the Host CLI is missing, the command fails (network, authentication, sandbox, timeout), the reply holds no skill name, or no installed plugin can be tested. Replies are model output, so a skip or a one-off fail is worth one rerun.
+Fix: start a new session so the plugins reload (the first session on a fresh machine only fetches the marketplace), then rerun; otherwise recheck M2 to M4.

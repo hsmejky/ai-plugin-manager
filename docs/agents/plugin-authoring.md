@@ -118,7 +118,7 @@ Claude Code updates when the `version` string changes; Codex updates when the ma
 
 ## Test an unreleased change locally
 
-Run the repository tests first: `node --test test/markdown-links.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root.
+Run the repository tests first: `node --test test/markdown-links.test.mjs test/doc-sync.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root.
 
 ### Claude Code
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { runChecks } from '../check-setup.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
-// Real CLI JSON shapes (see research host-cli-shapes.md).
+// Real CLI JSON shapes (real shapes: see the manual checks in docs/agents/verification.md).
 const claudeInstalled = (...entries) =>
   entries.map(([id, version = '1.0.0', enabled = false]) => ({
     id, version, scope: 'project', enabled, installPath: `C:\\cache\\${id}`, projectEnabled: false,

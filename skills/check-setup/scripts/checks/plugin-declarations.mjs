@@ -34,9 +34,22 @@ const CLAUDE_RESERVED = new Set([
   'claude-community',
   'claude-plugins-community',
   'healthcare',
+  // Plugin directory names, "reserved under the same rule as the official names". Source:
+  // https://code.claude.com/docs/en/plugins/marketplace-reference ("Reserved names"), read
+  // 2026-10-14, Claude Code 2.1.299; not run live.
+  'anthropic-plugin-directory',
+  'claude-plugin-directory',
 ]);
 const fromAnthropics = (m) => m.key.startsWith('github.com/anthropics/');
 const untrustedReserved = (name, m) => CLAUDE_RESERVED.has(name) && !fromAnthropics(m);
+// Another spelling of a reserved name (Claude Code 2.1.280+): differs only by a trailing dot or
+// by a symbol other than an underscore in place of a hyphen. Same page as above.
+const spellingOf = (name) => {
+  if (CLAUDE_RESERVED.has(name)) return null;
+  const folded = name.replace(/\.+$/, '').replace(/[^A-Za-z0-9_-]/g, '-');
+  return folded !== name && CLAUDE_RESERVED.has(folded) ? folded : null;
+};
+const hasNonAscii = (name) => /[^\x00-\x7f]/.test(name);
 const autoUpdatesByDefault = (name, m) =>
   CLAUDE_AUTOUPDATE_DEFAULT_ON.has(name) && fromAnthropics(m);
 
@@ -56,6 +69,21 @@ function checkP3(claude) {
     return fail(base, `${CLAUDE_SETTINGS} is not valid JSON (${claude.error})`, `Fix the JSON syntax in ${CLAUDE_SETTINGS}.`);
   }
   const reserved = [...claude.marketplaces].filter(([n, m]) => untrustedReserved(n, m)).map(([n]) => n);
+  const declared = [...claude.marketplaces.keys()];
+  const spelled = declared.filter((n) => spellingOf(n));
+  const nonAscii = declared.filter(hasNonAscii);
+  if (spelled.length > 0 || nonAscii.length > 0) {
+    const q = (l) => l.map((n) => `"${n}"`).join(', ');
+    const parts = [
+      ...spelled.map((n) => `"${n}" is another spelling of the reserved name "${spellingOf(n)}"`),
+      ...(nonAscii.length > 0 ? [`${q(nonAscii)} contains a non-ASCII character (read as impersonating an official marketplace)`] : []),
+    ];
+    return fail(
+      base,
+      `Marketplace name rejected by Claude Code, which stops loading the marketplace and its plugins: ${parts.join('; ')}`,
+      `Rename the marketplace ${q([...spelled, ...nonAscii])} in "extraKnownMarketplaces" of ${CLAUDE_SETTINGS} (and in the plugin ids "<plugin>@<marketplace>" under "enabledPlugins") to an ASCII name that is not a reserved name or a spelling of one.`,
+    );
+  }
   if (reserved.length > 0) {
     const q = reserved.map((n) => `"${n}"`).join(', ');
     return fail(

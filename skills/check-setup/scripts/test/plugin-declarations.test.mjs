@@ -180,3 +180,46 @@ test('P3 passes a reserved name for every spelling of a github.com/anthropics/ s
     assert.equal(p3.status, 'pass', JSON.stringify(source));
   }
 });
+
+// #54: reserved-name classes of https://code.claude.com/docs/en/plugins/marketplace-reference
+test('P3 fails the plugin directory names from a non-Anthropic source, passes them from github.com/anthropics/ (#54)', async () => {
+  for (const name of ['anthropic-plugin-directory', 'claude-plugin-directory']) {
+    const [bad] = find(await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('evil/x') } })), 'P3');
+    assert.equal(bad.status, 'fail', name);
+    assert.match(bad.message, new RegExp(name));
+    assert.match(bad.message, /untrusted source/);
+    const [ok] = find(await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('anthropics/x') } })), 'P3');
+    assert.equal(ok.status, 'pass', name);
+  }
+});
+
+test('P3 fails another spelling of a reserved name: trailing dot or a symbol other than _ for - (#54)', async () => {
+  for (const name of ['claude.code.plugins', 'claude-code-plugins.', 'claude-plugins-official..', 'anthropic.plugin-directory', 'agent.skills']) {
+    const [p3] = find(await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('o/m') } })), 'P3');
+    assert.equal(p3.status, 'fail', name);
+    assert.match(p3.message, new RegExp(name.replace(/\./g, '\\.')));
+    assert.match(p3.message, /another spelling/);
+    assert.match(p3.fix, /[Rr]ename/);
+  }
+});
+
+test('P3 does not treat an underscore, or an unrelated dotted name, as a spelling of a reserved name (#54)', async () => {
+  for (const name of ['claude_code_plugins', 'my.plugins', 'claude-code-plugins-extra']) {
+    const [p3] = find(await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('o/m') } })), 'P3');
+    assert.equal(p3.status, 'pass', name);
+  }
+});
+
+test('P3 fails a name with a non-ASCII character (#54)', async () => {
+  for (const name of ['clаude-plugins', 'café-plugins']) {
+    const [p3] = find(await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('o/m') } })), 'P3');
+    assert.equal(p3.status, 'fail', name);
+    assert.match(p3.message, /non-ASCII/);
+    assert.match(p3.fix, /[Rr]ename/);
+  }
+});
+
+test('P3 still passes a legitimate name (#54)', async () => {
+  const [p3] = find(await run(claude({ extraKnownMarketplaces: { 'acme-tools': ghMkt('acme/tools') } })), 'P3');
+  assert.equal(p3.status, 'pass');
+});

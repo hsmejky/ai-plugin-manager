@@ -93,3 +93,18 @@ test('verification.md lists manual checks with the Host versions they were last 
   assert.match(section, /Claude Code \d+\.\d+\.\d+/);
   assert.match(section, /codex-cli \d+\.\d+\.\d+/);
 });
+
+test('the README Tests section lists every suite the offline workflow runs', () => {
+  const readme = read('README.md');
+  const steps = [...read('.github/workflows/offline-tests.yml').matchAll(/run: node --test (\S+)/g)].map((m) => m[1]);
+  assert.ok(steps.length >= 4);
+  for (const s of steps) assert.ok(readme.includes(s), `README lacks ${s}`);
+  assert.ok(!/all three suites/.test(readme), 'README CI line counts the suites wrongly');
+  assert.match(readme, /CI:[^\n]*setup skill/);
+});
+
+test('plugin-authoring names setup as the user-only example', () => {
+  const doc = read('docs/agents/plugin-authoring.md');
+  const section = /### User-only skills[\s\S]*?(?=\n### )/.exec(doc)?.[0] ?? '';
+  assert.match(section, /`setup`/);
+});

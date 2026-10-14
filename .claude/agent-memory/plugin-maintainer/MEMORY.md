@@ -1,1 +1,1 @@
-- [Session verification run](feedback_session_verification_run.md) — commands and order for the full Objective 1 run (~2 min); docs Checkpoints as page lists
+- [Session verification run](feedback_session_verification_run.md) — Objective 1 run order (~2 min); docs Checkpoints as page lists; grep before docs-worded Deferred triggers

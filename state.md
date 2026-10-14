@@ -1,6 +1,6 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (seventh: #33 research note reviewed; filed #35 (project-only marketplace not auto-upgraded at Codex startup) and #36 (`features.plugins = false` undetected); new evidence on #20, #22, #31; no new Host release checked since the fourth session, so objectives 1-4 carry over).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (eighth: #35 research note reviewed: a project-only Codex marketplace is upgraded at startup when trusted, a session starts in it and lives ~2 s; earlier project-only claim withdrawn in corrections on #20, #22, #31; no new issue; no new Host release checked since the fourth session, so objectives 1-4 carry over).
 
 ## Hosts
 
@@ -23,4 +23,4 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## What next
 
-19, 20, 23, 21, 22, 24, 27, 29, 28, 30, 35, 32, 31, 34, 36
+19, 20, 23, 21, 22, 24, 27, 29, 28, 30, 32, 31, 34, 36

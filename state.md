@@ -1,6 +1,6 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (fourth: #29 triaged after the user's decisions; then decided (warn; message names the assumed channel), now ready-for-agent. No new Host release: npm `latest` 2.1.299 and 0.162.1, installed Hosts the same, so objectives 1-4 carry over from the second session).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (fifth: research results of #25 and #26 reviewed and their follow-ups filed as #30-#33; no new Host release since the fourth session, so objectives 1-4 carry over).
 
 ## Hosts
 
@@ -23,4 +23,4 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## What next
 
-19, 20, 23, 21, 22, 24, 27, 29, 25, 28, 26
+19, 20, 23, 21, 22, 24, 27, 29, 28, 30, 32, 31, 33, 25, 26

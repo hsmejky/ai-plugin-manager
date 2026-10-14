@@ -65,10 +65,10 @@ test('M3 fails with the exact add command when a marketplace is not registered',
   const [c] = forHost(r, 'M3', 'claude');
   assert.equal(c.status, 'fail');
   assert.match(c.message, /"m"/);
-  assert.equal(c.fix, 'claude plugin marketplace add o/m');
+  assert.match(c.fix, /^claude plugin marketplace add o\/m\n/);
   const [x] = forHost(r, 'M3', 'codex');
   assert.equal(x.status, 'fail');
-  assert.equal(x.fix, 'codex plugin marketplace add https://github.com/o/m.git');
+  assert.match(x.fix, /^codex plugin marketplace add https:\/\/github\.com\/o\/m\.git\n/);
 });
 
 test('M3 is skipped for a Host whose CLI is missing', async () => {
@@ -149,8 +149,8 @@ test('M4 fails with an install command when the plugin is not installed', async 
     claude: { plugins: claudeInstalled(), markets: claudeMarkets('m') },
     codex: { plugins: codexInstalled(), markets: codexMarkets('m') },
   });
-  assert.equal(forHost(r, 'M4', 'claude')[0].fix, 'claude plugin install a@m');
-  assert.equal(forHost(r, 'M4', 'codex')[0].fix, 'codex plugin add a@m');
+  assert.match(forHost(r, 'M4', 'claude')[0].fix, /^claude plugin install a@m\n/);
+  assert.match(forHost(r, 'M4', 'codex')[0].fix, /^codex plugin add a@m\n/);
   assert.equal(forHost(r, 'M4', 'codex')[0].status, 'fail');
 });
 

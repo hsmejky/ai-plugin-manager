@@ -3,6 +3,7 @@
 import { codexConfigLabel } from '../files.mjs';
 import { warn, fail, pass, skip } from '../findings.mjs';
 import { HOST, HOSTS, compareVersions, isRelease, skipUnlessRunnable } from '../hosts.mjs';
+import { setupPointer } from '../setup-pointer.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
 
 // Versions a Host prints when the plugin has none: Claude Code `unknown`, Codex `local`.
@@ -40,7 +41,7 @@ async function checkM3(host, decl, hostInfo, env) {
   return fail(
     base,
     `${label} marketplace ${missing.map((n) => `"${n}"`).join(', ')} is declared by the project but not registered on this machine`,
-    missing.map((n) => `${host} plugin marketplace add ${marketplaceAddArg(n, decl.marketplaces.get(n)?.raw)}`).join('\n'),
+    [...missing.map((n) => `${host} plugin marketplace add ${marketplaceAddArg(n, decl.marketplaces.get(n)?.raw)}`), setupPointer('')].join('\n'),
   );
 }
 
@@ -75,7 +76,7 @@ async function checkM4(host, decl, hostInfo, env) {
     }
   }
   if (problems.length === 0) return pass(base, `Every plugin the project enables is installed in ${label} from its declared marketplace`);
-  return fail(base, `${label}: ${problems.join('; ')}`, [...new Set(fixes)].join('\n'));
+  return fail(base, `${label}: ${problems.join('; ')}`, [...new Set(fixes), setupPointer('')].join('\n'));
 }
 
 async function checkM5(decls, hostInfos, env) {
@@ -124,6 +125,7 @@ async function checkM5(decls, hostInfos, env) {
       const cmp = compareVersions(d.claude, d.codex);
       fixes.push(cmp < 0 ? claudeFix : cmp > 0 ? codexFix : `${claudeFix}\n${codexFix}`);
     }
+    fixes.push(setupPointer(''));
   }
   if (unknown.length > 0) {
     const items = unknown.map((u) => {

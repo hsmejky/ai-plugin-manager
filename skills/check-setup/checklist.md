@@ -16,8 +16,8 @@ Fix: create `CLAUDE.md` containing the line `@AGENTS.md`, or add that line to th
 
 ### P3: Claude settings are valid and every enabled plugin's marketplace is declared
 
-Rationale: the expected Shared plugins come from `.claude/settings.json` (`enabledPlugins`). A JSON typo silently disables them, and a plugin whose marketplace is not in `extraKnownMarketplaces` cannot be installed on a fresh machine. The Claude built-in marketplace `claude-plugins-official` is exempt: it needs no declaration. Skip when the file does not exist.
-Fix: repair the JSON, and add `"<marketplace>": { "source": { "source": "github", "repo": "<owner>/<repo>" }, "autoUpdate": true }` under `extraKnownMarketplaces`.
+Rationale: the expected Shared plugins come from `.claude/settings.json` (`enabledPlugins`). A JSON typo silently disables them, and a plugin whose marketplace is not in `extraKnownMarketplaces` cannot be installed on a fresh machine. The Claude built-in marketplace `claude-plugins-official` is exempt: it needs no declaration. A declared marketplace with an official or community Anthropic name (the 14 official names, including `claude-plugins-official`, and `claude-community`, `claude-plugins-community`, `healthcare`) whose source is outside `github.com/anthropics/` is a fail: Claude Code refuses to load the marketplace and every plugin installed from it ("Marketplace is registered from an untrusted source"), and P7's `autoUpdate` fix cannot help, so P7 skips that entry. Source: https://code.claude.com/docs/en/plugins/security ("Identify Anthropic's marketplaces by name", "Untrusted marketplace sources and failed integrity checks"), read 2026-10-14, Claude Code 2.1.299; read, not run live. Skip when the file does not exist.
+Fix: repair the JSON, and add `"<marketplace>": { "source": { "source": "github", "repo": "<owner>/<repo>" }, "autoUpdate": true }` under `extraKnownMarketplaces`. For a reserved name from a non-Anthropic source, rename the marketplace (also in the `<plugin>@<marketplace>` ids) or use a source under `github.com/anthropics/`.
 
 ### P4: Codex project config declares the marketplace and the plugin
 

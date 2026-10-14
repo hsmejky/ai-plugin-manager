@@ -122,6 +122,35 @@ test('L1: calls each Host in the project directory, never with --bare, and names
   assert.ok(claude.opts.timeout > 30000);
 });
 
+// Real stderr of `claude -p` 2.1.299 for a schema-invalid but well-formed .claude/settings.json.
+const SETTINGS_STDERR = `These settings files did not load, so nothing in them is in effect, including hooks and permission rules. Each loads again once the problem listed for it is fixed:
+  C:\\proj\\.claude\\settings.json (permissions.allow): Expected array, but received number
+  C:\\proj\\.claude\\settings.json (enabledPlugins): Expected record, but received string
+`;
+
+test('L1: Claude Code settings validation errors on stderr become a fail naming file and entry', async () => {
+  const s = setup({ answers: { claude: { ok: true, stdout: 'NONE\n', stderr: SETTINGS_STDERR } } });
+  const f = l1(await s.run(), 'claude');
+  assert.equal(f.status, 'fail');
+  const text = `${f.message} ${f.fix}`;
+  assert.match(text, /settings\.json/);
+  assert.match(text, /enabledPlugins/);
+  assert.match(text, /permissions\.allow/);
+  assert.equal(l1(await s.run(), 'codex').status, 'pass');
+});
+
+test('L1: settings errors are reported even when the reply lists every skill', async () => {
+  const s = setup({ answers: { claude: { ok: true, stdout: 'alpha\nbeta\n', stderr: SETTINGS_STDERR } } });
+  const f = l1(await s.run(), 'claude');
+  assert.equal(f.status, 'fail');
+  assert.match(f.message, /enabledPlugins/);
+});
+
+test('L1: unrelated stderr output does not change the result', async () => {
+  const s = setup({ answers: { claude: { ok: true, stdout: 'alpha\nbeta\n', stderr: 'warning: something\n' } } });
+  assert.equal(l1(await s.run(), 'claude').status, 'pass');
+});
+
 test('L1: a missing plugin directory is a skip', async () => {
   const s = setup();
   const homeDir = fixture();

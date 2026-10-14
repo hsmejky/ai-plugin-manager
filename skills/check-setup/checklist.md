@@ -87,6 +87,13 @@ Rationale: different versions of one plugin make the Hosts behave differently. I
 Result: warn on any difference; skip when a Host CLI is missing, a config is unreadable, there are no Shared plugins, or none is installed in both Hosts (M4 reports that).
 Fix: update the Host with the older version. Claude Code: `claude plugin marketplace update <marketplace>`, then `claude plugin update <id>`, then restart. Codex: start a Codex session in the project (it upgrades the marketplace at start), or run `codex plugin marketplace upgrade <marketplace>` from the project. Never edit or reset the marketplace checkout by hand.
 
+### M6: Codex plugin support is not switched off
+
+Checked for Codex: `[features]` `plugins` in the project's `.codex/config.toml` and in `~/.codex/config.toml`.
+Rationale: `plugins = false` turns off Codex plugin support. Observed on codex-cli 0.162.1 (isolated `CODEX_HOME`, Windows, 2026-10-14): no plugin skill reaches the model (`codex debug prompt-input`), `codex plugin list --json` reports `{"installed": [], "available": []}` and `codex plugin marketplace list --json` reports `{"marketplaces": []}`, all with exit 0 and no message naming the flag; the config tables and plugin cache stay on disk. M3 and M4 then fail too, but their fixes do not help (`codex plugin marketplace add` says the marketplace is already added, `codex plugin add` says the plugin was not found), so fix M6 first. A trusted project's value overrides the user config in both directions; an untrusted project's `.codex/config.toml` is ignored until it is trusted; `codex -c features.plugins=...` overrides both. `codex features list` shows the effective value in its `plugins` row. Not read: profiles (`[profiles.<name>.features]`) and managed or system config.
+Result: fail when the project config sets `plugins = false` (Codex applies it once the project is trusted), or when the user config sets it and no trusted project config sets `plugins = true`; pass otherwise; skip when Codex is not installed (M1) or a config cannot be parsed (the skip names the file and parse error).
+Fix: remove `plugins = false` from the `[features]` table of the named file, or set it to `true`. For `~/.codex/config.toml`, `codex features enable plugins` does the same.
+
 ## Live check (opt-in)
 
 Runs only with `--live`, which the skill passes only when the user explicitly asks for a live check. Without it no model call is made and no L1 finding appears. It needs network and authentication in each Host.

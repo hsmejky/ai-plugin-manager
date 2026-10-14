@@ -61,6 +61,16 @@ test('P9 warns about a Codex full SHA and says to use a tag on both Hosts', asyn
   }
 });
 
+test('P9 skips a marketplace whose source differs between the Hosts (P6 fails it)', async () => {
+  const f0 = files({ claudeRef: 'v0.4.0', codexRef: 'v0.5.0' });
+  const dir = fixture({ ...f0, '.codex/config.toml': f0['.codex/config.toml'].replace('o/m.git', 'other/m.git') });
+  const found = await runChecks(envFor(dir));
+  assert.equal(find(found, 'P6')[0].status, 'fail');
+  const p9 = find(found, 'P9')[0];
+  assert.equal(p9.status, 'skip');
+  assert.match(p9.message, /source/);
+});
+
 test('P9 is skipped when no marketplace is declared in both Hosts', async () => {
   const toml = '[marketplaces.m]\nsource_type = "git"\nsource = "https://x/y.git"\nref = "v1"\n';
   const f = find(await runChecks(envFor(fixture({ '.codex/config.toml': toml }))), 'P9')[0];

@@ -42,6 +42,7 @@ function headingSlugs(text) {
 function extractLinks(text) {
   const links = [];
   for (const m of stripCode(text).matchAll(/!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) links.push(m[1]);
+  for (const m of stripCode(text).matchAll(/^ {0,3}\[[^\]\n]+\]:[ \t]*<?([^\s>]+)>?(?:[ \t]+(?:"[^"]*"|'[^']*'|\([^)]*\)))?[ \t]*$/gm)) links.push(m[1]);
   return links;
 }
 
@@ -90,6 +91,17 @@ test('reports a missing file and missing anchors, naming source and link', () =>
   assert.match(problems[0], /^a\.md: broken link "nope\.md"/);
   assert.match(problems[1], /^a\.md: broken link "b\.md#missing"/);
   assert.match(problems[2], /^a\.md: broken link "#nothing"/);
+});
+
+test('checks reference-style link definitions like inline links', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mdrefs-'));
+  writeFileSync(join(dir, 'b.md'), '# Real Heading\n');
+  writeFileSync(join(dir, 'a.md'),
+    '[ok]: b.md#real-heading\n[ext]: https://x.invalid/y\n[bad]: nope.md\n[bad2]: <b.md#missing> "Title"\n\n```\n[code]: ignored.md\n```\n');
+  const problems = findBrokenLinks(['a.md'], dir);
+  assert.equal(problems.length, 2, problems.join('\n'));
+  assert.match(problems[0], /^a\.md: broken link "nope\.md"/);
+  assert.match(problems[1], /^a\.md: broken link "b\.md#missing"/);
 });
 
 test('heading slugs follow GitHub rules', () => {

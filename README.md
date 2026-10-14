@@ -22,7 +22,7 @@ The plugin provides the `check-setup` skill, which verifies a project's Project 
    - Claude Code, in `.claude/settings.json`: `"enabledPlugins": { "ai-plugin-manager@ai-plugin-manager": true }` and `"extraKnownMarketplaces": { "ai-plugin-manager": { "source": { "source": "github", "repo": "hsmejky/ai-plugin-manager" }, "autoUpdate": true } }`.
    - Codex, in `.codex/config.toml`: `[marketplaces.ai-plugin-manager]` (`source_type = "git"`, `source = "https://github.com/hsmejky/ai-plugin-manager.git"`) and `[plugins."ai-plugin-manager@ai-plugin-manager"]` with `enabled = true`.
 2. On each machine, complete the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) in each Host (trust the project, install the plugin).
-3. Run the skill from the project root (Claude Code `/ai-plugin-manager:check-setup`, Codex `$ai-plugin-manager:check-setup`). See [running the checker](docs/agents/verification.md#run-the-setup-checker).
+3. Run the setup checker (the live check is opt-in): see [running the checker](docs/agents/verification.md#run-the-setup-checker).
 4. Read the report, apply the fixes and rerun until no fail remains. See [reading the report](docs/agents/verification.md#read-the-report).
 
 ## Docs

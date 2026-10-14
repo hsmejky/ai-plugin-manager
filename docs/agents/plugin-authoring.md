@@ -22,7 +22,7 @@ No Codex manifest is needed for the current plugin, and none is added here ([res
 
 | Field | What it does |
 |---|---|
-| `name` | Marketplace ID: the `<marketplace>` in `<plugin>@<marketplace>`. Consuming projects use it as the `extraKnownMarketplaces` key (Claude Code) and the `[marketplaces.<name>]` key (Codex); the Codex key equals the marketplace's own name. Renaming it breaks every consuming project. |
+| `name` | Marketplace ID: the `<marketplace>` in `<plugin>@<marketplace>`. Consuming projects use it as the `extraKnownMarketplaces` key (Claude Code) and the `[marketplaces.<name>]` key (Codex); in this repo the Codex key equals the marketplace's own name (observed in this repo, research S14 in the [sources](../research/plugin-authoring-both-hosts.md#sources); unverified: [open question 3](../research/plugin-authoring-both-hosts.md#open-questions)). Renaming it breaks every consuming project. |
 | `owner` | Marketplace owner. |
 | `description` | Marketplace description. |
 | `plugins[]` | One entry per plugin. |
@@ -31,10 +31,7 @@ No Codex manifest is needed for the current plugin, and none is added here ([res
 | `plugins[].description` | Entry description. |
 | `plugins[].category` | Category. Codex reads it; OpenAI's docs call it required, Codex's source defaults it ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). Keep it set. |
 
-Codex also reads an optional `policy` per entry, and keeps other entry keys as an inline fallback manifest when the plugin root has no manifest file ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). In Claude Code, entry fields combine with `plugin.json` according to the entry's `strict` flag ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). Keep the manifest data in `plugin.json` and the entry to the fields above, so both Hosts read the same values.
-
-A further plugin gets its own entry and its own directory inside the repository, with its own `.claude-plugin/plugin.json`.
-
+Codex also reads an optional `policy` per entry, and keeps other entry keys as an inline fallback manifest when the plugin root has no manifest file ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). In Claude Code, entry fields combine with `plugin.json` according to the entry's `strict` flag ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)).
 ## Plugin manifest
 
 `.claude-plugin/plugin.json` describes the plugin. Claude Code requires only `name` when the file exists and strips unknown top-level keys with a validation warning ([research §2](../research/plugin-authoring-both-hosts.md#2-does-codex-need-its-own-manifest)). Codex reads `name`, `version`, `description`, `keywords`, `skills`, `mcpServers`, `apps`, `hooks`, `interface` and `extensions`, and ignores other keys ([research §2](../research/plugin-authoring-both-hosts.md#2-does-codex-need-its-own-manifest)).
@@ -60,7 +57,7 @@ Register every skill folder in the manifest `skills` array (`"./skills/<skill>"`
 - Claude Code adds the listed paths to its default `skills/` scan, so it would find an unlisted `skills/<skill>/` anyway.
 - Codex replaces the default `skills/` root with the listed paths and scans each of them for `SKILL.md`, so an unlisted skill does not appear in Codex.
 
-A skill that works in Claude Code but is missing in Codex is most often not listed in `skills`.
+Per the research note, Codex replaces its default `skills/` root with the listed paths (from source reading, not run), so list every skill folder.
 
 ### Invoke a skill in each Host
 
@@ -76,7 +73,6 @@ Codex's `$<plugin>:<skill>` form follows from its source and was observed with c
 
 ### Naming and descriptions
 
-- Name skills in lowercase words joined by hyphens (`check-setup`). The name appears after `/` in one Host and `$` in the other, so it must read well with either prefix.
 - Write the description as what the skill does, then when to use it ("Use when …"), as `check-setup` does. Codex can pick a skill by its description alone ([research §3](../research/plugin-authoring-both-hosts.md#3-skill-registration-exposure-and-invocation)).
 - Keep Host-specific syntax out of skill text. When a skill must tell the user how to run something, give both forms, as the README does for `check-setup`.
 
@@ -114,7 +110,7 @@ Why: Claude Code resolves a plugin's version from the manifest `version` first, 
 
 - Codex follows the git marketplace's ref: an upgrade compares the remote revision of the configured ref with the installed snapshot, activates a new snapshot when they differ, and then reinstalls the configured plugins' cache without comparing `version` ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)).
 - Automatic: Codex starts a marketplace auto-upgrade task at startup when plugins are enabled; its timing, interval and opt-out are not established ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up), open question 4).
-- Manual: `codex plugin marketplace upgrade <marketplace>`, run inside the trusted repository (any subdirectory works). Where the marketplace is not configured as a git marketplace it fails with ``Error: marketplace `<marketplace>` is not configured as a Git marketplace`` ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)).
+- Manual: `codex plugin marketplace upgrade <marketplace>`. Where the marketplace is not configured as a git marketplace it fails with ``Error: marketplace `<marketplace>` is not configured as a Git marketplace`` ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)).
 
 ### Version drift
 

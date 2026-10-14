@@ -9,16 +9,16 @@ Claude Code and Codex work from the same project instructions and the same skill
 Project level only. Out of scope:
 
 - User-level configuration (`~/.claude`, `~/.codex`) and its eventual removal.
-- Hooks: they stay host-specific (the Claude context-budget hook stays user-level).
+- Hooks: they stay Host-specific (the Claude context-budget hook stays user-level).
 - MCP servers.
 - Subagents (formats are incompatible).
 
 ## Decisions
 
-1. **Instructions:** `AGENTS.md` is canonical, with host-labelled passages where the hosts differ. `CLAUDE.md` contains only `@AGENTS.md`. Claude Code expands the import at session start, so the content carries the same weight as if written in `CLAUDE.md`. Native `AGENTS.md` loading in Claude Code is not relied on: it needs Claude Code v2.1.277 or later, is unavailable in some sessions, and applies only when no `CLAUDE.md` exists in the working directory or above ([Claude Code memory: AGENTS.md](https://code.claude.com/docs/en/memory#agents-md)).
-2. **Plugin skills:** installed through a plugin for each host, not committed as copies. The plugin is their source, and a copy would drift from it. Plugin skills are never edited or renamed locally, so upstream updates keep applying.
-3. **Plugins in general:** shared only when both hosts can install them from one source.
-4. **Skills outside a shared plugin:** not installed by default. When one is needed, install it for both hosts explicitly (for example `npx skills add <source> --skill <name> -a claude-code -a codex`) and commit the result. Project scope writes `.claude/skills/` for Claude Code and `.agents/skills/` for Codex. This follows the skills CLI convention (its README describes project scope as "Committed with your project, shared with team", [vercel-labs/skills](https://github.com/vercel-labs/skills)). With no plugin both hosts can install, the committed copy is the single shared source that every clone gets, so the hosts stay aligned without per-machine steps. Keep those directories out of `.gitignore`.
+1. **Instructions:** `AGENTS.md` is canonical, with Host-labelled passages where the hosts differ. `CLAUDE.md` contains only `@AGENTS.md`. Claude Code expands the import at session start, so the content carries the same weight as if written in `CLAUDE.md`. Native `AGENTS.md` loading in Claude Code is not relied on: it needs Claude Code v2.1.277 or later, is unavailable in some sessions, and applies only when no `CLAUDE.md` exists in the working directory or above ([Claude Code memory: AGENTS.md](https://code.claude.com/docs/en/memory#agents-md)).
+2. **Plugin skills:** installed through a plugin for each Host, not committed as copies. The plugin is their source, and a copy would drift from it. Plugin skills are never edited or renamed locally, so upstream updates keep applying.
+3. **Plugins in general:** shared only when both Hosts can install them from one source.
+4. **Skills outside a Shared plugin:** not installed by default. When one is needed, install it for both Hosts explicitly (for example `npx skills add <source> --skill <name> -a claude-code -a codex`) and commit the result. Project scope writes `.claude/skills/` for Claude Code and `.agents/skills/` for Codex. This follows the skills CLI convention (its README describes project scope as "Committed with your project, shared with team", [vercel-labs/skills](https://github.com/vercel-labs/skills)). With no plugin both Hosts can install, the committed copy is the single shared source that every clone gets, so the Hosts stay aligned without per-machine steps. Keep those directories out of `.gitignore`.
 
 The concrete plugin list lives in `.claude/settings.json` and `.codex/config.toml`. This document uses `<plugin>@<marketplace>` for an entry in it.
 

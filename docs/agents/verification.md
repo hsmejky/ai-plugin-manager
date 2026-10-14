@@ -32,7 +32,7 @@ claude -p "List the names of all skills available to you that come from the <plu
 codex exec --skip-git-repo-check "List the names of all skills available to you that come from the <plugin> plugin. Output only the names, one per line, or NONE. Do not run any tools."
 ```
 
-Pass: both hosts list the same set of names. Skills with `disable-model-invocation: true` are user-only slash commands and do not appear in a model's list, so compare against the skills listed in the `skills` array of the plugin manifest (`.claude-plugin/plugin.json`) that lack that flag, not against the full command list or every `SKILL.md` in the plugin's source repository.
+Pass: both Hosts list the same set of names. Skills with `disable-model-invocation: true` are user-only slash commands and do not appear in a model's list, so compare against the skills listed in the `skills` array of the plugin manifest (`.claude-plugin/plugin.json`) that lack that flag, not against the full command list or every `SKILL.md` in the plugin's source repository.
 
 Instructions:
 

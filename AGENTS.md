@@ -30,7 +30,7 @@ It ends with verifying the setup per `docs/agents/verification.md`.
 
 ## Plugin versioning
 
-Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Codex follows the marketplace HEAD and has no manifest here; bump any Codex manifest added later in the same commit. Reasons and update mechanics: `docs/agents/plugin-authoring.md`.
+Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Codex follows the marketplace HEAD and has no manifest here; bump any Codex manifest added later in the same commit.
 
 ## Token economy
 

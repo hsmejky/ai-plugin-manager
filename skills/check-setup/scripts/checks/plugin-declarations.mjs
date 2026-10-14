@@ -24,8 +24,21 @@ const CLAUDE_AUTOUPDATE_DEFAULT_ON = new Set([
   'financial-services-plugins',
   'claude-tag-plugins',
 ]);
+// Names Claude Code accepts only for github.com/anthropics/ sources: the 14 official names and the
+// 3 community names. Source: https://code.claude.com/docs/en/plugins/security ("Identify
+// Anthropic's marketplaces by name"), read 2026-10-14, Claude Code 2.1.299; not run live.
+const CLAUDE_RESERVED = new Set([
+  ...CLAUDE_AUTOUPDATE_DEFAULT_ON,
+  'knowledge-work-plugins',
+  'first-party-plugins',
+  'claude-community',
+  'claude-plugins-community',
+  'healthcare',
+]);
+const fromAnthropics = (m) => m.key.startsWith('github.com/anthropics/');
+const untrustedReserved = (name, m) => CLAUDE_RESERVED.has(name) && !fromAnthropics(m);
 const autoUpdatesByDefault = (name, m) =>
-  CLAUDE_AUTOUPDATE_DEFAULT_ON.has(name) && m.key.startsWith('github.com/anthropics/');
+  CLAUDE_AUTOUPDATE_DEFAULT_ON.has(name) && fromAnthropics(m);
 
 // Codex names: `codex plugin marketplace list --json` plus the marketplaces in
 // `codex plugin list --json`, codex-cli 0.162.1 (2026-10-14).
@@ -42,6 +55,15 @@ function checkP3(claude) {
   if (claude.state === 'invalid') {
     return fail(base, `${CLAUDE_SETTINGS} is not valid JSON (${claude.error})`, `Fix the JSON syntax in ${CLAUDE_SETTINGS}.`);
   }
+  const reserved = [...claude.marketplaces].filter(([n, m]) => untrustedReserved(n, m)).map(([n]) => n);
+  if (reserved.length > 0) {
+    const q = reserved.map((n) => `"${n}"`).join(', ');
+    return fail(
+      base,
+      `Marketplace ${q} uses a name reserved for Anthropic but its source is outside github.com/anthropics/, so Claude Code stops loading it and its plugins ("Marketplace is registered from an untrusted source")`,
+      `Rename the marketplace ${q} in "extraKnownMarketplaces" of ${CLAUDE_SETTINGS} (and in the plugin ids "<plugin>@<marketplace>" under "enabledPlugins"), or use a source under github.com/anthropics/.`,
+    );
+  }
   const undeclared = [...claude.plugins].filter(
     (id) => !claude.marketplaces.has(marketplaceOf(id)) && !CLAUDE_BUILTIN.has(marketplaceOf(id)),
   );
@@ -57,7 +79,7 @@ function checkP3(claude) {
 function checkP7(claude) {
   const base = { id: 'P7', host: 'claude', layer: 'project' };
   if (claude.state !== 'ok') return skip(base, `${CLAUDE_SETTINGS} is missing or unreadable (see P3)`);
-  const declared = [...claude.marketplaces].filter(([name, m]) => !autoUpdatesByDefault(name, m));
+  const declared = [...claude.marketplaces].filter(([name, m]) => !autoUpdatesByDefault(name, m) && !untrustedReserved(name, m));
   if (declared.length === 0) return skip(base, 'No marketplace that needs "autoUpdate" is declared');
   const names = declared.filter(([, m]) => m.autoUpdate !== true).map(([name]) => name);
   if (names.length === 0) return pass(base, 'Every declared marketplace has "autoUpdate": true');

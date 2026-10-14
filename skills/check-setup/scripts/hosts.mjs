@@ -21,7 +21,7 @@ import { claudeTrust, codexTrust } from './trust.mjs';
 export const HOST = {
   claude: {
     label: 'Claude Code',
-    testedVersion: '2.1.296',
+    testedVersion: '2.1.299',
     configFile: CLAUDE_SETTINGS,
     installVerb: 'install',
     uninstallVerb: 'uninstall',
@@ -43,7 +43,7 @@ export const HOST = {
   },
   codex: {
     label: 'Codex',
-    testedVersion: '0.160.1',
+    testedVersion: '0.162.1',
     configFile: CODEX_CONFIG,
     installVerb: 'add',
     uninstallVerb: 'remove',

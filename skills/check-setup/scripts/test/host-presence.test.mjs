@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { runChecks } from '../check-setup.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
-const CLAUDE_OK = '2.1.296 (Claude Code)\n';
-const CODEX_OK = 'codex-cli 0.160.1\n';
+const CLAUDE_OK = '2.1.299 (Claude Code)\n';
+const CODEX_OK = 'codex-cli 0.162.1\n';
 
 function stub(outputs) {
   return async (cmd) =>
@@ -33,13 +33,13 @@ test('M1 warns for an outdated CLI and names both versions', async () => {
   const c = m1(findings, 'claude');
   assert.equal(c.status, 'warn');
   assert.match(c.message, /2\.1\.295/);
-  assert.match(c.message, /2\.1\.296/);
+  assert.match(c.message, /2.1.299/);
   assert.ok(c.fix);
   assert.equal(m1(findings, 'codex').status, 'warn');
 });
 
 test('M1 compares numerically, not lexically', async () => {
-  const findings = await run({ claude: '2.1.1000 (Claude Code)', codex: 'codex-cli 0.160.1' });
+  const findings = await run({ claude: '2.1.1000 (Claude Code)', codex: 'codex-cli 0.162.1' });
   assert.equal(m1(findings, 'claude').status, 'pass');
 });
 

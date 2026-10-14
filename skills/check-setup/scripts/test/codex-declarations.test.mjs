@@ -66,3 +66,10 @@ test('P4 ignores plugins disabled in Codex', async () => {
   const [p4] = find(await run(codex('[plugins."a@m"]\nenabled = false\n')), 'P4');
   assert.equal(p4.status, 'pass');
 });
+
+test('P4 exempts plugins from every Codex built-in marketplace', async () => {
+  for (const name of ['openai-bundled', 'openai-curated', 'openai-primary-runtime', 'openai-curated-remote']) {
+    const [p4] = find(await run(codex(CX_PLUGIN(`github@${name}`))), 'P4');
+    assert.equal(p4.status, 'pass', name);
+  }
+});

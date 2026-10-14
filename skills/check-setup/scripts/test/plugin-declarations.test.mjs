@@ -83,12 +83,56 @@ test('P7 names only the marketplaces that lack it', async () => {
   assert.doesNotMatch(p7.message, /"ok"/);
 });
 
-test('P7 does not warn for the official marketplace, whose default is already on', async () => {
+test('P7 does not warn for default-on official names sourced from github.com/anthropics/', async () => {
+  for (const name of ['claude-plugins-official', 'anthropic-agent-skills']) {
+    const [p7] = find(
+      await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('anthropics/some-repo') } })),
+      'P7',
+    );
+    assert.equal(p7.status, 'skip', name);
+  }
+});
+
+test('P7 treats a git URL under github.com/anthropics/ as an official source', async () => {
   const [p7] = find(
-    await run(claude({ extraKnownMarketplaces: { 'claude-plugins-official': mkt() } })),
+    await run(
+      claude({
+        extraKnownMarketplaces: {
+          'claude-code-plugins': { source: { source: 'git', url: 'https://github.com/anthropics/x.git' } },
+        },
+      }),
+    ),
     'P7',
   );
   assert.equal(p7.status, 'skip');
+});
+
+test('P7 still warns for the official names that do not auto-update by default', async () => {
+  for (const name of ['knowledge-work-plugins', 'first-party-plugins']) {
+    const [p7] = find(
+      await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('anthropics/some-repo') } })),
+      'P7',
+    );
+    assert.equal(p7.status, 'warn', name);
+    assert.match(p7.message, new RegExp(name));
+  }
+});
+
+test('P7 still warns for the community name', async () => {
+  const [p7] = find(
+    await run(claude({ extraKnownMarketplaces: { 'claude-community': ghMkt('anthropics/some-repo') } })),
+    'P7',
+  );
+  assert.equal(p7.status, 'warn');
+});
+
+test('P7 warns for an official name whose source is outside github.com/anthropics/', async () => {
+  const [p7] = find(
+    await run(claude({ extraKnownMarketplaces: { 'claude-plugins-official': ghMkt('evil/anthropics') } })),
+    'P7',
+  );
+  assert.equal(p7.status, 'warn');
+  assert.match(p7.message, /claude-plugins-official/);
 });
 
 test('P7 is skipped when there is no Claude settings file or it is unreadable', async () => {

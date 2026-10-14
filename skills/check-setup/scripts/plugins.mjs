@@ -38,7 +38,10 @@ export async function listInstalledPlugins(host, env) {
   const raw = Array.isArray(r.value) ? r.value : r.value?.installed;
   if (!Array.isArray(raw)) return { ok: false, error: 'unexpected JSON shape' };
   const plugins = raw.map((entry) => normalizePlugin(host, entry)).filter(Boolean);
-  return { ok: true, plugins: plugins.filter((p) => appliesToProject(p, env.projectDir)) };
+  // Same id in several scopes: the project/local entry comes first, so find() gets it whatever the CLI order.
+  // Which entry Claude Code itself loads is unverified; this is the chosen rule, pinned by tests (#46).
+  const narrow = (p) => (p.scope === 'project' || p.scope === 'local' ? 0 : 1);
+  return { ok: true, plugins: plugins.filter((p) => appliesToProject(p, env.projectDir)).sort((a, b) => narrow(a) - narrow(b)) };
 }
 
 /** Comparable form of a path: forward slashes, no trailing slash, Git Bash `/c/x` as `c:/x`, case-folded. */

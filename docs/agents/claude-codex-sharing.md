@@ -60,31 +60,5 @@ Sources: [Claude Code: keep plugins updated](https://code.claude.com/docs/en/dis
       [projects.'<absolute path>']
       trust_level = "trusted"
       ```
-   2. In a trusted project, a session start fetches the declared marketplace itself (verified in an isolated `CODEX_HOME`: no `codex plugin marketplace add` needed, no user config written). On a fresh trusted machine the first `codex exec` may list `NONE` (and a first Verification run may fail) because the marketplace is fetched during that session; another session then lists the skills. Running `codex plugin marketplace upgrade <marketplace>` from inside the repository is optional.
-4. **Verify** (below).
-
-## Verification
-
-The `check-setup` skill automates the Project setup and Machine setup checks; its [checklist](../../skills/check-setup/checklist.md) is the single list of checks, rationale and fixes. Its live check (L1) reuses the skills prompt below.
-
-To verify by hand, run each prompt non-interactively in each host from the repository root.
-
-Skills:
-
-```
-claude -p "List the names of all skills available to you that come from the <plugin> plugin. Output only the names, one per line, or NONE. Do not run any tools."
-codex exec --skip-git-repo-check "List the names of all skills available to you that come from the <plugin> plugin. Output only the names, one per line, or NONE. Do not run any tools."
-```
-
-Pass: both hosts list the same set of names. Skills with `disable-model-invocation: true` are user-only slash commands and do not appear in a model's list, so compare against the skills listed in the `skills` array of the plugin manifest (`.claude-plugin/plugin.json`) that lack that flag, not against the full command list or every `SKILL.md` in the plugin's source repository.
-
-Instructions:
-
-```
-claude -p "In which language must project artifacts be written, according to the project instructions? Answer in one word. Do not run any tools."
-codex exec --skip-git-repo-check "In which language must project artifacts be written, according to the project instructions? Answer in one word. Do not run any tools."
-```
-
-Pass: both answer `English` (the project language rule in `AGENTS.md`). Any specific rule from `AGENTS.md` works.
-
-Negative check: run the `codex exec` skills command from a directory outside the repository. It must output `NONE`, provided the plugin is not also enabled in the user-level Codex config.
+   2. In a trusted project, a session start fetches the declared marketplace itself (verified in an isolated `CODEX_HOME`: no `codex plugin marketplace add` needed, no user config written). On a fresh trusted machine the first `codex exec` may list `NONE` (and a first verification run may fail) because the marketplace is fetched during that session; another session then lists the skills. Running `codex plugin marketplace upgrade <marketplace>` from inside the repository is optional.
+4. **Verify** with the [verification doc](verification.md).

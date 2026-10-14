@@ -1,17 +1,18 @@
-// L2 (opt-in, env.live): compare each installed Host with its Latest release. Needs npm and network,
+// L2 (opt-in, env.live): compare each installed Host with its Latest release. Needs network (asks the npm registry directly),
 // makes no model call. A failed lookup is a skip, never a pass.
 //
-// Source: npm dist-tags. Codex: `@openai/codex` tag `latest`. Claude Code: `@anthropic-ai/claude-code`
+// Source: npm registry dist-tags. Codex: `@openai/codex` tag `latest`. Claude Code: `@anthropic-ai/claude-code`
 // tags `latest` and `stable`. That these tags equal Claude Code's `autoUpdatesChannel` channels is
 // unverified: the setup page (https://code.claude.com/docs/en/setup#configure-release-channel) does
 // not mention npm dist-tags; the values matched the channels on 2026-10-14.
 import { join } from 'node:path';
 import { readJson } from '../files.mjs';
 import { pass, warn, skip } from '../findings.mjs';
-import { HOST, HOSTS, compareVersions } from '../hosts.mjs';
+import { HOST, HOSTS, compareVersions, isRelease } from '../hosts.mjs';
 
 const PACKAGE = { claude: '@anthropic-ai/claude-code', codex: '@openai/codex' };
 const UPDATE = { claude: 'claude update', codex: 'codex update' };
+const REGISTRY = 'https://registry.npmjs.org';
 const CHANNELS = ['latest', 'stable'];
 
 /** autoUpdatesChannel from local, project, then user settings (first one set wins), or null. */
@@ -28,20 +29,19 @@ function configuredChannel(env) {
   return null;
 }
 
-/** { ok: true, tags } with the dist-tags object, or { ok: false, error }. */
+/**
+ * { ok: true, tags } with the dist-tags object, or { ok: false, error }.
+ * Asks the registry over HTTPS (env.fetchJson), not `npm view`: npm can answer from its local cache
+ * with exit 0 when the network is down (stale pass), and on Windows it needs a shell, which leaves an
+ * orphaned npm process on timeout and prints DEP0190 on Node 24.
+ */
 async function distTags(host, env) {
-  const r = await env.runCommand('npm', ['view', PACKAGE[host], 'dist-tags', '--json']);
+  const r = await env.fetchJson(`${REGISTRY}/-/package/${PACKAGE[host]}/dist-tags`);
   if (!r.ok) return { ok: false, error: r.error };
-  try {
-    const tags = JSON.parse(r.stdout);
-    if (tags && typeof tags === 'object' && !Array.isArray(tags)) return { ok: true, tags };
-  } catch {
-    // falls through
-  }
-  return { ok: false, error: `unexpected output of npm view ${PACKAGE[host]}` };
+  const tags = r.json;
+  if (tags && typeof tags === 'object' && !Array.isArray(tags)) return { ok: true, tags };
+  return { ok: false, error: `unexpected registry answer for ${PACKAGE[host]}` };
 }
-
-const validVersion = (v) => typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v);
 
 async function checkHost(host, hostInfo, env) {
   const base = { id: 'L2', host, layer: 'machine' };
@@ -65,7 +65,7 @@ async function checkHost(host, hostInfo, env) {
   const looked = await distTags(host, env);
   if (!looked.ok) return skip(base, `Could not look up the latest ${label} release (${looked.error})`);
   const latest = looked.tags[channel];
-  if (!validVersion(latest)) return skip(base, `npm has no "${channel}" version for ${PACKAGE[host]}`);
+  if (!isRelease(latest)) return skip(base, `the registry has no "${channel}" version for ${PACKAGE[host]}`);
 
   if (compareVersions(hostInfo.version, latest) >= 0) {
     return pass(base, `${label} ${hostInfo.version} is at the Latest release (${latest}) on ${channelNote}`);

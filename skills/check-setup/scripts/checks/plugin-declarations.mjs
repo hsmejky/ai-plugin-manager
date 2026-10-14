@@ -5,6 +5,28 @@ import { codexUrlFor, CLAUDE_SETTINGS, CODEX_CONFIG } from '../declarations.mjs'
 
 // Marketplaces a Host knows without a project declaration.
 const CLAUDE_BUILTIN = new Set(['claude-plugins-official']);
+// Official names for which Claude Code turns auto-update on by default, only when sourced
+// from github.com/anthropics/. Source: https://code.claude.com/docs/en/plugins/security
+// (official names) and https://code.claude.com/docs/en/discover-plugins (defaults), read
+// 2026-10-14, Claude Code 2.1.299. 'knowledge-work-plugins' and 'first-party-plugins' are
+// official names but default to off, so they are not listed here.
+const CLAUDE_AUTOUPDATE_DEFAULT_ON = new Set([
+  'claude-plugins-official',
+  'claude-code-marketplace',
+  'claude-code-plugins',
+  'anthropic-marketplace',
+  'anthropic-plugins',
+  'agent-skills',
+  'anthropic-agent-skills',
+  'life-sciences',
+  'claude-for-legal',
+  'claude-for-financial-services',
+  'financial-services-plugins',
+  'claude-tag-plugins',
+]);
+const autoUpdatesByDefault = (name, m) =>
+  CLAUDE_AUTOUPDATE_DEFAULT_ON.has(name) && m.key.startsWith('github.com/anthropics/');
+
 // Codex names: `codex plugin marketplace list --json` plus the marketplaces in
 // `codex plugin list --json`, codex-cli 0.162.1 (2026-10-14).
 const CODEX_BUILTIN = new Set([
@@ -35,7 +57,7 @@ function checkP3(claude) {
 function checkP7(claude) {
   const base = { id: 'P7', host: 'claude', layer: 'project' };
   if (claude.state !== 'ok') return skip(base, `${CLAUDE_SETTINGS} is missing or unreadable (see P3)`);
-  const declared = [...claude.marketplaces].filter(([name]) => !CLAUDE_BUILTIN.has(name));
+  const declared = [...claude.marketplaces].filter(([name, m]) => !autoUpdatesByDefault(name, m));
   if (declared.length === 0) return skip(base, 'No marketplace that needs "autoUpdate" is declared');
   const names = declared.filter(([, m]) => m.autoUpdate !== true).map(([name]) => name);
   if (names.length === 0) return pass(base, 'Every declared marketplace has "autoUpdate": true');

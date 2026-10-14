@@ -25,6 +25,29 @@ test('P8 passes with a branch or tag name', async () => {
   }
 });
 
+test('P8 warns on 41-63 and 64 hex characters (not a commit)', async () => {
+  for (const n of [41, 50, 63, 64]) {
+    const [f] = await run(mkt(`ref = "${'a'.repeat(n)}"\n`));
+    assert.equal(f.status, 'warn', String(n));
+    assert.match(f.message, new RegExp(`${n} hex characters`));
+    assert.match(f.message, /not a 40-character commit SHA/);
+  }
+});
+
+test('P8 warns on a padded 40-hex SHA (Codex does not trim)', async () => {
+  const [f] = await run(mkt(`ref = " ${FULL} "
+`));
+  assert.equal(f.status, 'warn');
+  assert.match(f.message, /whitespace/);
+});
+
+test('P8 message for an all-hex name says it may be a branch or tag, not a short SHA', async () => {
+  const [f] = await run(mkt('ref = "deadbeef"\n'));
+  assert.equal(f.status, 'warn');
+  assert.match(f.message, /branch or tag/);
+  assert.doesNotMatch(f.message, /abbreviated commit SHA/);
+});
+
 test('P8 warns on a short SHA and names the marketplace and fix', async () => {
   const [f] = await run(mkt('ref = "a157af3"\n'));
   assert.equal(f.status, 'warn');

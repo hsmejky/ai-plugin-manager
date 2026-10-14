@@ -62,6 +62,11 @@ function parseVersion(text) {
   return m ? `${m[1]}.${m[2]}.${m[3]}` : null;
 }
 
+/** True for a plain release number like 1.2.3 (no prefix, suffix or SHA). */
+export function isRelease(v) {
+  return typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v);
+}
+
 /** Numeric semver compare: negative when a < b, 0 when equal, positive when a > b. */
 export function compareVersions(a, b) {
   const pa = a.split('.').map(Number);

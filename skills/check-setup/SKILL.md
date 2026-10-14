@@ -24,7 +24,7 @@ Add `--live` only when the user explicitly asks for it (argument `live`, or word
 "ask each Host to list its skills"). Never add it on your own, for "why aren't my skills loading?" or any
 other request: it makes one model call per Host and plugin and needs network and authentication.
 
-If `CLAUDE_SKILL_DIR` is unset (Codex), use the path of this skill directory instead.
+`${CLAUDE_SKILL_DIR}` is a substitution Claude Code performs in skill content, not an environment variable. If the literal text `${CLAUDE_SKILL_DIR}` remains (Codex), use the path of this skill directory instead.
 `--project <dir>` overrides the project root (default: git top level of the current directory).
 The script prints `{ projectDir, findings }` as JSON and exits 1 when any finding failed.
 Exit 1 is a normal result, not an error.

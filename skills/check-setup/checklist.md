@@ -2,6 +2,8 @@
 
 Single source for every check: id, rationale, fix. Add new checks here.
 
+Host homes. Codex user state (`config.toml`, `plugins/cache`) is read from `$CODEX_HOME` when that variable is set and non-empty, else from `~/.codex` (source: Codex `codex-rs/utils/home-dir/src/lib.rs`, `find_codex_home`, tag `rust-v0.162.1`; whether an empty value counts as unset is unverified). Below, `~/.codex` means that directory, and findings name the file actually read. Claude Code user state (`~/.claude.json`, `~/.claude/settings.json`) is read from the home directory only: `CLAUDE_CONFIG_DIR` is not followed (whether and how Claude Code relocates those files with it is unverified against its docs; `host-cli.test.mjs` only shows that the CLI honours it for isolation, on 2.1.299). Neither Host variable changes the project-level files.
+
 ## Project setup
 
 ### P1: `AGENTS.md` exists
@@ -60,9 +62,9 @@ Fix: install or update the CLI and put it on PATH.
 
 Checked per Host, for the project root.
 - Claude Code: `~/.claude.json` `projects` has an entry for the project path (forward slashes, e.g. `C:/Users/me/repo`) with `hasTrustDialogAccepted: true`. A trusted parent folder does not count. On Windows the path match is case-insensitive, because the case of drive letter and folders varies between launches; on POSIX it is exact.
-- Codex: `~/.codex/config.toml` has `[projects.'<path>']` with `trust_level = "trusted"`. On Windows the path is lowercased with backslashes; on POSIX it is exact. `~/.codex/config.toml` is read with the repository's own TOML reader; if it cannot be parsed, the check is a warn with the parse error (trust cannot be judged), not a fail.
+- Codex: `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`) has `[projects.'<path>']` with `trust_level = "trusted"`. On Windows the path is lowercased with backslashes; on POSIX it is exact. `~/.codex/config.toml` is read with the repository's own TOML reader; if it cannot be parsed, the check is a warn with the parse error (trust cannot be judged), not a fail.
 Rationale: both Hosts load project-level plugin configuration only for trusted projects.
-Fix: Claude Code, run `claude` interactively in the repository and accept the workspace trust dialog. Codex, run `codex` there and accept the trust prompt, or add the table above to `~/.codex/config.toml`.
+Fix: Claude Code, run `claude` interactively in the repository and accept the workspace trust dialog. Codex, run `codex` there and accept the trust prompt, or add the table above to the user config (`~/.codex/config.toml`, or `$CODEX_HOME/config.toml` when set).
 
 ### M3: declared marketplaces are registered
 
@@ -90,10 +92,10 @@ Unverified: what `codex plugin list --json` and `claude plugin list --json` prin
 
 ### M6: Codex plugin support is not switched off
 
-Checked for Codex: `[features]` `plugins` in the project's `.codex/config.toml` and in `~/.codex/config.toml`.
+Checked for Codex: `[features]` `plugins` in the project's `.codex/config.toml` and in the user config (`$CODEX_HOME/config.toml`, else `~/.codex/config.toml`).
 Rationale: `plugins = false` turns off Codex plugin support. Observed on codex-cli 0.162.1 (isolated `CODEX_HOME`, Windows, 2026-10-14): no plugin skill reaches the model (`codex debug prompt-input`), `codex plugin list --json` reports `{"installed": [], "available": []}` and `codex plugin marketplace list --json` reports `{"marketplaces": []}`, all with exit 0 and no message naming the flag; the config tables and plugin cache stay on disk. M3 and M4 then fail too, but their fixes do not help (`codex plugin marketplace add` says the marketplace is already added, `codex plugin add` says the plugin was not found), so fix M6 first. A trusted project's value overrides the user config in both directions; an untrusted project's `.codex/config.toml` is ignored until it is trusted; `codex -c features.plugins=...` overrides both. `codex features list` shows the effective value in its `plugins` row. Not read: profiles (`[profiles.<name>.features]`) and managed or system config.
 Result: fail when the project config sets `plugins = false` (Codex applies it once the project is trusted), or when the user config sets it and no trusted project config sets `plugins = true`; pass otherwise; skip when Codex is not installed (M1) or a config cannot be parsed (the skip names the file and parse error).
-Fix: remove `plugins = false` from the `[features]` table of the named file, or set it to `true`. For `~/.codex/config.toml`, `codex features enable plugins` does the same.
+Fix: remove `plugins = false` from the `[features]` table of the named file, or set it to `true`. For the user config, `codex features enable plugins` does the same.
 
 ## Live check (opt-in)
 

@@ -49,7 +49,7 @@ Negative check: run the `codex exec` skills command from a directory outside the
 
 ## Manual checks of Host behaviour
 
-Claims in this repository's docs and in `check-setup` fixes that describe how a Host behaves and that no test covers. A Host release can change any of them without a test failing, so recheck the row after a Host release and update the versions. Versions are the ones the claim was last confirmed on (audit of 2026-10-14 unless noted); "source" rows were read from Host source or docs, not run.
+Claims in this repository's docs and in `check-setup` fixes that describe how a Host behaves and that no test covers. A Host release can change any of them without a test failing, so recheck the row after a Host release and update the versions. The tested versions of check M1 (`testedVersion` in `skills/check-setup/scripts/hosts.mjs`, checklist M1, the sharing doc prerequisites) are the Host versions this suite was last verified on: when you rerun this table or the Host CLI tests (`CHECK_SETUP_HOST_CLI=1`) on newer Host versions and they pass, raise all three in the same commit. Versions are the ones the claim was last confirmed on (audit of 2026-10-14 unless noted); "source" rows were read from Host source or docs, not run.
 
 | Claim | Where | How to recheck | Last confirmed |
 |---|---|---|---|

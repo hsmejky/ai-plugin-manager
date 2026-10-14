@@ -51,7 +51,7 @@ Fix: set `ref` to the full 40-character SHA, or to a tag or branch name.
 
 ### M1: Host CLI installed and at least the tested version
 
-Checked per Host. Tested versions: Claude Code 2.1.296, codex-cli 0.160.1. Detection runs `<host> --version` (see `scripts/hosts.mjs`, `detectHosts`).
+Checked per Host. Tested versions: Claude Code 2.1.299, codex-cli 0.162.1. Detection runs `<host> --version` (see `scripts/hosts.mjs`, `detectHosts`).
 Rationale: the setup was verified with these versions; a missing CLI cannot use the shared plugins, and an older one may behave differently.
 Result: warn when the CLI is missing, older than the tested version, or prints no parseable version ("version undetermined": the CLI runs, but its `--version` output holds no x.y.z, so the minimum cannot be verified); pass otherwise. When a Host is missing, its other machine checks (M2 onward) are skipped with a reason.
 Fix: install or update the CLI and put it on PATH.

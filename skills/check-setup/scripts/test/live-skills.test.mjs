@@ -27,7 +27,7 @@ function setup({ names = ['alpha', 'beta'], answers = {}, claudeInstalled = true
   const out = (v) => ({ ok: true, stdout: JSON.stringify(v) });
   const runCommand = async (cmd, args, opts) => {
     calls.push({ cmd, args, opts });
-    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296' : 'codex-cli 0.160.1' };
+    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.299' : 'codex-cli 0.162.1' };
     if (args[0] === 'plugin' && args[1] === 'list') {
       if (cmd === 'claude') {
         return out(claudeInstalled ? [{ id: PLUGIN, version: '1.0.0', scope: 'project', enabled: false, installPath: claudeDir }] : []);
@@ -104,7 +104,7 @@ test('L1: skips when the plugin is not installed (M4 reports it)', async () => {
 test('L1: skips when the project enables no plugin for the Host', async () => {
   const projectDir = fixture({ 'AGENTS.md': 'x' });
   const runCommand = async (cmd, args) =>
-    args[0] === '--version' ? { ok: true, stdout: '2.1.296' } : { ok: false, error: 'x' };
+    args[0] === '--version' ? { ok: true, stdout: '2.1.299' } : { ok: false, error: 'x' };
   const f = l1(await runChecks(envFor(projectDir, { live: true, runCommand })), 'claude');
   assert.equal(f.status, 'skip');
 });
@@ -156,7 +156,7 @@ test('L1: a missing plugin directory is a skip', async () => {
   const homeDir = fixture();
   const projectDir = s.projectDir;
   const runCommand = async (cmd, args) => {
-    if (args[0] === '--version') return { ok: true, stdout: '0.160.1' };
+    if (args[0] === '--version') return { ok: true, stdout: '0.162.1' };
     if (args[1] === 'list') return { ok: true, stdout: JSON.stringify({ installed: [{ pluginId: PLUGIN, version: '1.0.0', installed: true, enabled: true }] }) };
     return { ok: true, stdout: 'alpha' };
   };
@@ -180,7 +180,7 @@ function setupGate({ flag, yaml, answers = {} }) {
   const homeDir = fixture(files('.codex/plugins/cache/m/tools/1.0.0'));
   const out = (v) => ({ ok: true, stdout: JSON.stringify(v) });
   const runCommand = async (cmd, args) => {
-    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296' : 'codex-cli 0.160.1' };
+    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.299' : 'codex-cli 0.162.1' };
     if (args[0] === 'plugin' && args[1] === 'list') {
       return cmd === 'claude'
         ? out([{ id: PLUGIN, version: '1.0.0', scope: 'project', enabled: false, installPath: claudeDir }])
@@ -277,7 +277,7 @@ for (const order of ['user first', 'project first']) {
     const user = { id: PLUGIN, version: '1.0.0', scope: 'user', enabled: true, installPath: userDir };
     const project = { id: PLUGIN, version: '1.0.0', scope: 'project', projectPath: projectDir, enabled: true, installPath: projectPlugin };
     const runCommand = async (cmd, args) => {
-      if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296' : 'codex-cli 0.160.1' };
+      if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.299' : 'codex-cli 0.162.1' };
       if (args[0] === 'plugin') return { ok: true, stdout: JSON.stringify(cmd === 'claude' ? (order === 'user first' ? [user, project] : [project, user]) : []) };
       return { ok: true, stdout: 'alpha\nbeta\n' };
     };

@@ -20,6 +20,10 @@ _Avoid_: Repo config, project config
 The part of the shared agent setup that lives on one machine outside the repository, such as project trust, marketplace registration, and plugin installation, done once per machine and Host.
 _Avoid_: Local setup, user config, environment
 
+**Latest release**:
+The newest published release of a Host on the release channel being followed.
+_Avoid_: Current stable release
+
 **Gap**:
 A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, or an unused capability.
 _Avoid_: Drift, debt

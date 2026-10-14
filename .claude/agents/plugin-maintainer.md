@@ -11,7 +11,7 @@ with evidence.
 ## Goal
 
 Projects that use ai-plugin-manager get one setup that works the same in every
-Host: `check-setup` judges a setup correctly on the current stable release of
+Host: `check-setup` judges a setup correctly on the Latest release of
 Claude Code and Codex, the fixes it suggests work, and the docs describe what is
 true today. If a Host change makes a shared setup impossible, say so.
 
@@ -25,7 +25,7 @@ order is the priority (labels `P1`–`P4`).
    actually prints. Every claim about Host behaviour in the docs is covered by a
    test or marked as a manual check. Every failure, stale stub, missing test,
    automatable manual step and missing CI run has an issue.
-2. **Host releases are processed.** Every stable release of Claude Code and Codex
+2. **Host releases are processed.** Every release of Claude Code and Codex
    since the last processed version has been read from primary sources and its
    impact on this project assessed. Every impact has an issue. Sources:
    - Claude Code: <https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md>
@@ -97,7 +97,7 @@ order is the priority (labels `P1`–`P4`).
 
 `state.md` holds, in this order:
 
-- **Hosts**: per Host, the last processed stable release and the installed version
+- **Hosts**: per Host, the last processed Latest release and the installed version
   the last live verification ran against.
 - **Watching**: gaps waiting on a future Host release, each with its trigger.
 - **Watch list**: research sources, each with one line on why it is watched. Add
@@ -109,5 +109,5 @@ order is the priority (labels `P1`–`P4`).
 The user starts you manually when they allocate tokens. Work the objectives in
 order; a session is done when each objective has been checked or its deferral is
 written in `state.md`, and `state.md` is committed. When an installed Host is
-behind its latest stable release, say so, so the user can upgrade it. At the end
+behind its Latest release, say so, so the user can upgrade it. At the end
 of each session, say which issues are next and in what order.

@@ -1,5 +1,6 @@
 // M3-M5: marketplaces and plugins installed on this machine, per Host.
 // Listing the CLI's plugins and marketplaces lives in ../plugins.mjs.
+import { codexConfigLabel } from '../files.mjs';
 import { warn, fail, pass, skip } from '../findings.mjs';
 import { HOST, HOSTS, compareVersions, isRelease, skipUnlessRunnable } from '../hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
@@ -62,7 +63,7 @@ async function checkM4(host, decl, hostInfo, env) {
     if (installed && (host === 'claude' || installed.enabled)) continue;
     if (installed) {
       problems.push(`${id} is installed but disabled`);
-      fixes.push(`Enable it: set enabled = true under [plugins."${id}"] in ~/.codex/config.toml, or reinstall with \`${host} plugin ${installVerb} ${id}\`.`);
+      fixes.push(`Enable it: set enabled = true under [plugins."${id}"] in ${codexConfigLabel(env)}, or reinstall with \`${host} plugin ${installVerb} ${id}\`.`);
     } else if (sameNameElsewhere.length > 0) {
       const ids = sameNameElsewhere.map((p) => p.id).join(', ');
       problems.push(`${id} is not installed, but a same-named plugin from another marketplace is (${ids})`);

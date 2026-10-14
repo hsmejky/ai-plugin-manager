@@ -5,7 +5,7 @@ import { fixture, envFor, find } from './helpers.mjs';
 
 const POSIX = '/home/jan/repo';
 const installed = async (cmd) =>
-  cmd === 'claude' ? { ok: true, stdout: '2.1.296 (Claude Code)' } : { ok: true, stdout: 'codex-cli 0.162.1' };
+  cmd === 'claude' ? { ok: true, stdout: '2.1.299 (Claude Code)' } : { ok: true, stdout: 'codex-cli 0.162.1' };
 
 async function m6({ home = {}, project = {}, runCommand = installed }) {
   const env = envFor(fixture(project), { platform: 'linux', runCommand, homeDir: fixture(home) });

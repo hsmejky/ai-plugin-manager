@@ -14,13 +14,14 @@
 // version is a "x.y.z" string, or null when the CLI is missing or prints no parseable version.
 import { join } from 'node:path';
 import { skip } from './findings.mjs';
+import { codexHome } from './files.mjs';
 import { CLAUDE_SETTINGS, CODEX_CONFIG } from './declarations.mjs';
 import { claudeTrust, codexTrust } from './trust.mjs';
 
 export const HOST = {
   claude: {
     label: 'Claude Code',
-    testedVersion: '2.1.296',
+    testedVersion: '2.1.299',
     configFile: CLAUDE_SETTINGS,
     installVerb: 'install',
     uninstallVerb: 'uninstall',
@@ -42,14 +43,14 @@ export const HOST = {
   },
   codex: {
     label: 'Codex',
-    testedVersion: '0.160.1',
+    testedVersion: '0.162.1',
     configFile: CODEX_CONFIG,
     installVerb: 'add',
     uninstallVerb: 'remove',
     marketplaceAddArg: (name, raw = {}) => raw.url ?? `<git url of ${name}>`,
     parsePlugin: (e) => ({ id: e?.pluginId, enabled: e?.enabled === true && e?.installed !== false, source: e?.source }),
     pluginDir: (plugin, env) =>
-      join(env.homeDir, '.codex', 'plugins', 'cache', plugin.marketplace, plugin.name, plugin.version ?? ''),
+      join(codexHome(env), 'plugins', 'cache', plugin.marketplace, plugin.name, plugin.version ?? ''),
     promptArgs: (prompt) => ['exec', '--skip-git-repo-check', prompt],
     checkTrust: codexTrust,
   },

@@ -34,7 +34,7 @@ The Project setup each Host reads:
 | | Claude Code | Codex |
 |---|---|---|
 | Instructions | `CLAUDE.md` → `@AGENTS.md` | `AGENTS.md` (native) |
-| Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace, its source and `"autoUpdate": true`) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
+| Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace, its source and `"autoUpdate": true`; optional `ref`, branch or tag, [opt-in pinning](plugin-authoring.md#pin-a-marketplace-to-a-release)) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; optional `ref`, branch, tag or full SHA, never a short SHA; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
 
 Install each Shared plugin only from the marketplace declared for it. A same-named plugin from another marketplace (for example `claude-plugins-official` ships its own `mattpocock-skills`) is a different copy, and the Hosts' versions then drift.
 
@@ -44,7 +44,7 @@ How each Host invokes a plugin skill and picks up updates is in the [authoring d
 
 The Machine setup, once per machine and Host.
 
-1. **Prerequisites:** both CLIs installed, at versions no older than those tested: Claude Code 2.1.296 and codex-cli 0.160.1.
+1. **Prerequisites:** both CLIs installed, at versions no older than those tested: Claude Code 2.1.299 and codex-cli 0.162.1.
 2. **Claude Code:**
    1. Run `claude` interactively in the repository and accept the workspace trust dialog. Project-scope plugins load only after trust is accepted for the repository folder itself; `-p` or trusting a parent folder is not enough.
    2. Stay in that session until `/plugin` → Marketplaces lists the marketplace. Claude registers a marketplace declared only in project settings in the background after an interactive session starts ([plugin loading](https://code.claude.com/docs/en/plugins/loading)).

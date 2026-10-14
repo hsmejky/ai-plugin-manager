@@ -16,7 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runChecks, defaultRunCommand, defaultFetchJson, gitTopLevel } from '../../check-setup/scripts/check-setup.mjs';
 import { loadDeclarations, parseDeclarations, CLAUDE_SETTINGS, CODEX_CONFIG } from '../../check-setup/scripts/declarations.mjs';
-import { proposeAdd } from './project-edits.mjs';
+import { proposeAdd, proposePin } from './project-edits.mjs';
 import { detectHosts, HOST, HOSTS, compareVersions, skipUnlessRunnable } from '../../check-setup/scripts/hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, marketplaceOf } from '../../check-setup/scripts/plugins.mjs';
 import { checkCodexFeatures } from '../../check-setup/scripts/checks/codex-features.mjs';
@@ -103,9 +103,9 @@ export async function planSetup(env, request = {}) {
   const hosts = await detectHosts(env);
   let decls = loadDeclarations(env.projectDir);
   let projectEdits = [];
-  if (request.add) {
+  if (request.add || request.pin !== undefined || request.unpin !== undefined) {
     const files = { claude: readIfExists(env.projectDir, CLAUDE_SETTINGS), codex: readIfExists(env.projectDir, CODEX_CONFIG) };
-    const proposal = await proposeAdd(env, files, request);
+    const proposal = await (request.add ? proposeAdd : proposePin)(env, files, request);
     if (proposal.refused) return finish({ request, projectEdits: [], hosts: {}, manual: [], notes: [], refused: proposal.refused });
     projectEdits = proposal.edits;
     // Machine steps follow the declarations as they will be after the edits.
@@ -222,13 +222,13 @@ export async function applySetup(env, plan) {
 
 // ---------------------------------------------------------------- CLI
 
-const USAGE = 'usage: setup.mjs plan [--add <plugin>@<marketplace> [--source <owner/repo | URL>]] [--project <dir>] | setup.mjs apply [same flags] --expect <digest>';
+const USAGE = 'usage: setup.mjs plan [--add <plugin>@<marketplace> [--source <owner/repo | URL>] | --pin <marketplace> --ref <tag-or-branch> | --unpin <marketplace>] [--project <dir>] | setup.mjs apply [same flags] --expect <digest>';
 
 export async function runCli(argv, env) {
   const [sub, ...rest] = argv;
   const flags = {};
   for (let i = 0; i < rest.length; i += 2) {
-    if (!['--expect', '--project', '--add', '--source'].includes(rest[i]) || rest[i + 1] === undefined) {
+    if (!['--expect', '--project', '--add', '--source', '--pin', '--ref', '--unpin'].includes(rest[i]) || rest[i + 1] === undefined) {
       return { code: 2, json: { error: `unsupported argument ${rest[i]}`, usage: USAGE } };
     }
     flags[rest[i]] = rest[i + 1];
@@ -239,6 +239,15 @@ export async function runCli(argv, env) {
   if (flags['--source']) {
     if (!request.add) return { code: 2, json: { error: '--source needs --add', usage: USAGE } };
     request.source = flags['--source'];
+  }
+  if (flags['--pin'] !== undefined) request.pin = flags['--pin'];
+  if (flags['--unpin'] !== undefined) request.unpin = flags['--unpin'];
+  if (flags['--ref'] !== undefined) {
+    if (request.pin === undefined) return { code: 2, json: { error: '--ref needs --pin', usage: USAGE } };
+    request.ref = flags['--ref'];
+  }
+  if (['add', 'pin', 'unpin'].filter((k) => request[k] !== undefined).length > 1) {
+    return { code: 2, json: { error: 'use only one of --add, --pin, --unpin', usage: USAGE } };
   }
   if (sub === 'plan') {
     const plan = await planSetup(env, request);

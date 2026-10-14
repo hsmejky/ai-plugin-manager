@@ -27,5 +27,7 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Markdown links
         run: node --test test/markdown-links.test.mjs
+      - name: Doc sync
+        run: node --test test/doc-sync.test.mjs
       - name: check-setup skill
         run: node --test skills/check-setup/scripts/test/*.test.mjs

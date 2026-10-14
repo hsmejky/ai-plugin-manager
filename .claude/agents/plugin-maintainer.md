@@ -25,7 +25,7 @@ order is the priority (labels `P1`–`P4`).
    actually prints. Every claim about Host behaviour in the docs is covered by a
    test or marked as a manual check. Every failure, stale stub, missing test,
    automatable manual step and missing CI run has an issue.
-2. **Host releases are processed.** Every release of Claude Code and Codex
+2. **Host releases are processed.** Every release of Claude Code and Codex on the release channel being followed
    since the last processed version has been read from primary sources and its
    impact on this project assessed. Every impact has an issue. Sources:
    - Claude Code: <https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md>

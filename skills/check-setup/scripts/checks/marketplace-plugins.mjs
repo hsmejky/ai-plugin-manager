@@ -4,6 +4,22 @@ import { warn, fail, pass, skip } from '../findings.mjs';
 import { HOST, HOSTS, skipUnlessRunnable } from '../hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
 
+const NO_MANIFEST = /marketplace root does not contain a supported manifest/i;
+
+/** Fix for a failed list command: specific when Codex reports a marketplace without a manifest. */
+function listFailureFix(host, decl, error, genericFix) {
+  if (!NO_MANIFEST.test(error ?? '')) return genericFix;
+  const { configFile, marketplaceAddArg } = HOST[host];
+  const declared = [...decl.marketplaces].map(([name, entry]) => ({ name, source: marketplaceAddArg(name, entry.raw) }));
+  const sources = declared.map((d) => `"${d.name}" (${d.source})`).join(', ');
+  return [
+    `A marketplace has no supported manifest at its root. The declared source${declared.length === 1 ? '' : 's'} ${sources} must contain \`.claude-plugin/marketplace.json\` at the declared ref.`,
+    `Publish the manifest there, or point the marketplace declaration in ${configFile} at a ref that has it.`,
+    'If the registration on this machine is stale, re-register it:',
+    ...declared.map((d) => `${host} plugin marketplace remove ${d.name}\n${host} plugin marketplace add ${d.source}`),
+  ].join('\n');
+}
+
 async function checkM3(host, decl, hostInfo, env) {
   const base = { id: 'M3', host, layer: 'machine' };
   const { label, configFile, marketplaceAddArg } = HOST[host];
@@ -12,7 +28,8 @@ async function checkM3(host, decl, hostInfo, env) {
   if (decl.marketplaces.size === 0) return skip(base, `${configFile} declares no marketplace`);
   const list = await listMarketplaces(host, env);
   if (!list.ok) {
-    return warn(base, `Could not list ${label} marketplaces (${list.error})`, `Run \`${host} plugin marketplace list --json\` and fix the error.`);
+    const generic = `Run \`${host} plugin marketplace list --json\` and fix the error.`;
+    return warn(base, `Could not list ${label} marketplaces (${list.error})`, listFailureFix(host, decl, list.error, generic));
   }
   const registered = new Set(list.marketplaces.map((m) => m.name));
   const missing = [...decl.marketplaces.keys()].filter((n) => !registered.has(n));
@@ -32,7 +49,8 @@ async function checkM4(host, decl, hostInfo, env) {
   if (decl.plugins.size === 0) return skip(base, `${configFile} enables no plugin`);
   const list = await listInstalledPlugins(host, env);
   if (!list.ok) {
-    return warn(base, `Could not list ${label} plugins (${list.error})`, `Run \`${host} plugin list --json\` and fix the error.`);
+    const generic = `Run \`${host} plugin list --json\` and fix the error.`;
+    return warn(base, `Could not list ${label} plugins (${list.error})`, listFailureFix(host, decl, list.error, generic));
   }
   const problems = [];
   const fixes = [];

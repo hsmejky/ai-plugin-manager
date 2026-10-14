@@ -114,6 +114,31 @@ test('M3 and M4 name an unreadable project config file and its error in their sk
   }
 });
 
+test('M3 and M4 Codex warns give a specific fix when a marketplace root has no supported manifest', async () => {
+  const error = 'Command failed: codex plugin list --json | Error: marketplace root does not contain a supported manifest';
+  const base = stub(ALL_OK);
+  const runCommand = async (cmd, args) =>
+    cmd === 'codex' && args[1] !== undefined && args[0] === 'plugin' && args[1] !== '--version' && args[2] !== 'add'
+      ? { ok: false, error }
+      : base(cmd, args);
+  const r = await runChecks(envFor(fixture(files(['a@m'])), { runCommand }));
+  for (const id of ['M3', 'M4']) {
+    const [f] = forHost(r, id, 'codex');
+    assert.equal(f.status, 'warn');
+    assert.match(f.message, /supported manifest/);
+    assert.match(f.fix, /\.claude-plugin\/marketplace\.json/);
+    assert.match(f.fix, /https:\/\/github\.com\/o\/m\.git/);
+    assert.match(f.fix, /codex plugin marketplace remove m/);
+    assert.match(f.fix, /codex plugin marketplace add https:\/\/github\.com\/o\/m\.git/);
+  }
+});
+
+test('M3 and M4 warns keep the generic fix for other list errors', async () => {
+  const r = await run(files(['a@m']), { claude: ALL_OK.claude, codex: { plugins: undefined, markets: undefined } });
+  assert.match(forHost(r, 'M3', 'codex')[0].fix, /codex plugin marketplace list --json/);
+  assert.match(forHost(r, 'M4', 'codex')[0].fix, /codex plugin list --json/);
+});
+
 test('M3 is skipped when the Host declares no marketplace', async () => {
   const r = await run({}, ALL_OK);
   assert.equal(forHost(r, 'M3', 'claude')[0].status, 'skip');

@@ -41,15 +41,46 @@ const CLAUDE_RESERVED = new Set([
   'claude-plugin-directory',
 ]);
 const fromAnthropics = (m) => m.key.startsWith('github.com/anthropics/');
-const untrustedReserved = (name, m) => CLAUDE_RESERVED.has(name) && !fromAnthropics(m);
+// Names reserved whatever the source (no github.com/anthropics/ exemption). Source: same page,
+// "Reserved names", read 2026-10-14, Claude Code 2.1.299; not run live.
+const NO_MARKETPLACE_NAMES = new Set(['inline', 'builtin', 'skills-dir', 'synced', 'claude-plugin-test']);
+// In any casing; the check needs Claude Code 2.1.275+.
+const PACKAGE_MANAGER_NAMES = new Set(['npm', 'pip', 'uv', 'cargo', 'github', 'gh']);
+// Members every JavaScript object has; `marketplace add` refuses them, Claude Code 2.1.296+.
+const JS_OBJECT_MEMBERS = new Set([
+  'constructor', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'valueOf',
+]);
+const CLAUDEAI_PREFIX = 'claudeai-';
+const isExactReserved = (name) =>
+  CLAUDE_RESERVED.has(name) || NO_MARKETPLACE_NAMES.has(name) || PACKAGE_MANAGER_NAMES.has(name.toLowerCase()) || JS_OBJECT_MEMBERS.has(name);
 // Another spelling of a reserved name (Claude Code 2.1.280+): differs only by a trailing dot or
 // by a symbol other than an underscore in place of a hyphen. Same page as above.
 const spellingOf = (name) => {
-  if (CLAUDE_RESERVED.has(name)) return null;
+  if (isExactReserved(name)) return null;
   const folded = name.replace(/\.+$/, '').replace(/[^A-Za-z0-9_-]/g, '-');
-  return folded !== name && CLAUDE_RESERVED.has(folded) ? folded : null;
+  return folded !== name && isExactReserved(folded) ? folded : null;
 };
+const hasControlOrBidi = (name) => /[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(name);
 const hasNonAscii = (name) => /[^\x00-\x7f]/.test(name);
+
+/** Why Claude Code rejects marketplace `name` (one reason per name), or null. */
+function reservedReason(name, m) {
+  if (CLAUDE_RESERVED.has(name) && !fromAnthropics(m)) {
+    return { kind: 'untrusted', text: `"${name}" is a name reserved for Anthropic but its source is outside github.com/anthropics/ ("Marketplace is registered from an untrusted source")` };
+  }
+  if (NO_MARKETPLACE_NAMES.has(name)) return { text: `"${name}" is a name Claude Code uses for plugins without a marketplace` };
+  if (PACKAGE_MANAGER_NAMES.has(name.toLowerCase())) return { text: `"${name}" is a reserved package manager or code host name (any casing)` };
+  if (JS_OBJECT_MEMBERS.has(name)) return { text: `"${name}" is a reserved JavaScript object member name` };
+  if (name.startsWith(CLAUDEAI_PREFIX)) return { text: `"${name}" starts with "claudeai-", which is reserved for marketplaces hosted on claude.ai` };
+  if (hasControlOrBidi(name)) return { text: `${JSON.stringify(name)} contains a control or bidirectional-formatting character` };
+  if (hasNonAscii(name)) return { text: `"${name}" contains a non-ASCII character (read as impersonating an official marketplace)` };
+  const spelling = spellingOf(name);
+  if (spelling) return { text: `"${name}" is another spelling of the reserved name "${spelling}"` };
+  return null;
+}
+const quoted = (names) => names.map((n) => `"${n}"`).join(', ');
+const renameFix = (names) =>
+  `Rename ${quoted(names)} in "extraKnownMarketplaces" of ${CLAUDE_SETTINGS} (and in the plugin ids "<plugin>@<marketplace>" under "enabledPlugins")`;
 const autoUpdatesByDefault = (name, m) =>
   CLAUDE_AUTOUPDATE_DEFAULT_ON.has(name) && fromAnthropics(m);
 
@@ -68,28 +99,17 @@ function checkP3(claude) {
   if (claude.state === 'invalid') {
     return fail(base, `${CLAUDE_SETTINGS} is not valid JSON (${claude.error})`, `Fix the JSON syntax in ${CLAUDE_SETTINGS}.`);
   }
-  const reserved = [...claude.marketplaces].filter(([n, m]) => untrustedReserved(n, m)).map(([n]) => n);
-  const declared = [...claude.marketplaces.keys()];
-  const spelled = declared.filter((n) => spellingOf(n));
-  const nonAscii = declared.filter(hasNonAscii);
-  if (spelled.length > 0 || nonAscii.length > 0) {
-    const q = (l) => l.map((n) => `"${n}"`).join(', ');
-    const parts = [
-      ...spelled.map((n) => `"${n}" is another spelling of the reserved name "${spellingOf(n)}"`),
-      ...(nonAscii.length > 0 ? [`${q(nonAscii)} contains a non-ASCII character (read as impersonating an official marketplace)`] : []),
-    ];
+  const rejected = [...claude.marketplaces]
+    .map(([name, m]) => ({ name, reason: reservedReason(name, m) }))
+    .filter((r) => r.reason);
+  if (rejected.length > 0) {
+    const names = rejected.map((r) => r.name);
+    const untrusted = rejected.filter((r) => r.reason.kind === 'untrusted').map((r) => r.name);
+    const orSource = untrusted.length > 0 ? `, or for ${quoted(untrusted)} use a source under github.com/anthropics/` : '';
     return fail(
       base,
-      `Marketplace name rejected by Claude Code, which stops loading the marketplace and its plugins: ${parts.join('; ')}`,
-      `Rename the marketplace ${q([...spelled, ...nonAscii])} in "extraKnownMarketplaces" of ${CLAUDE_SETTINGS} (and in the plugin ids "<plugin>@<marketplace>" under "enabledPlugins") to an ASCII name that is not a reserved name or a spelling of one.`,
-    );
-  }
-  if (reserved.length > 0) {
-    const q = reserved.map((n) => `"${n}"`).join(', ');
-    return fail(
-      base,
-      `Marketplace ${q} uses a name reserved for Anthropic but its source is outside github.com/anthropics/, so Claude Code stops loading it and its plugins ("Marketplace is registered from an untrusted source")`,
-      `Rename the marketplace ${q} in "extraKnownMarketplaces" of ${CLAUDE_SETTINGS} (and in the plugin ids "<plugin>@<marketplace>" under "enabledPlugins"), or use a source under github.com/anthropics/.`,
+      `Marketplace name rejected by Claude Code, which stops loading the marketplace and its plugins: ${rejected.map((r) => r.reason.text).join('; ')}`,
+      `${renameFix(names)} to an ASCII name that is not reserved${orSource}.`,
     );
   }
   const undeclared = [...claude.plugins].filter(
@@ -107,7 +127,7 @@ function checkP3(claude) {
 function checkP7(claude) {
   const base = { id: 'P7', host: 'claude', layer: 'project' };
   if (claude.state !== 'ok') return skip(base, `${CLAUDE_SETTINGS} is missing or unreadable (see P3)`);
-  const declared = [...claude.marketplaces].filter(([name, m]) => !autoUpdatesByDefault(name, m) && !untrustedReserved(name, m));
+  const declared = [...claude.marketplaces].filter(([name, m]) => !autoUpdatesByDefault(name, m) && !reservedReason(name, m));
   if (declared.length === 0) return skip(base, 'No marketplace that needs "autoUpdate" is declared');
   const names = declared.filter(([, m]) => m.autoUpdate !== true).map(([name]) => name);
   if (names.length === 0) return pass(base, 'Every declared marketplace has "autoUpdate": true');

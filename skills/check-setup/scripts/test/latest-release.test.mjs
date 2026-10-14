@@ -8,7 +8,7 @@ const CLAUDE_TAGS = '{\n  "stable": "2.1.287",\n  "latest": "2.1.299",\n  "next"
 // Codex output truncated to the first tags plus latest (the real object has about 50 tags).
 const CODEX_TAGS = JSON.stringify({ beta: '0.1.2505172116', 'release-0.159.0-alpha.12.1-alpha': '0.159.0-alpha.12.1', latest: '0.162.1' }, null, 2) + '\n';
 
-function setup({ claude = '2.1.299', codex = '0.162.1', npm, userSettings, projectSettings, claudeInstalled = true, codexInstalled = true } = {}) {
+function setup({ claude = '2.1.299', codex = '0.162.1', registry, userSettings, projectSettings, claudeInstalled = true, codexInstalled = true } = {}) {
   const calls = [];
   const runCommand = async (cmd, args) => {
     calls.push({ cmd, args });
@@ -17,22 +17,34 @@ function setup({ claude = '2.1.299', codex = '0.162.1', npm, userSettings, proje
       if (cmd === 'codex' && codexInstalled) return { ok: true, stdout: `codex-cli ${codex}` };
       return { ok: false, error: 'command not found' };
     }
-    if (cmd === 'npm') {
-      if (npm) return npm(args);
-      return { ok: true, stdout: args.includes('@openai/codex') ? CODEX_TAGS : CLAUDE_TAGS };
-    }
     return { ok: false, error: 'unexpected' };
+  };
+  const urls = [];
+  const fetchJson = async (url) => {
+    urls.push(url);
+    if (registry) return registry(url);
+    return { ok: true, json: JSON.parse(url.includes('@openai/codex') ? CODEX_TAGS : CLAUDE_TAGS) };
   };
   const homeDir = fixture(userSettings ? { '.claude/settings.json': JSON.stringify(userSettings) } : {});
   const projectDir = fixture(projectSettings ? { '.claude/settings.json': JSON.stringify(projectSettings) } : {});
-  return { calls, run: (live = true) => runChecks(envFor(projectDir, { homeDir, runCommand, live })) };
+  return { calls, urls, run: (live = true) => runChecks(envFor(projectDir, { homeDir, runCommand, fetchJson, live })) };
 }
 const l2 = (findings, host) => find(findings, 'L2').find((f) => f.host === host);
 
-test('L2: without --live no L2 finding and no npm call', async () => {
+test('L2: without --live no L2 finding and no registry call', async () => {
   const s = setup();
   assert.equal(find(await s.run(false), 'L2').length, 0);
-  assert.equal(s.calls.filter((c) => c.cmd === 'npm').length, 0);
+  assert.equal(s.urls.length, 0);
+});
+
+test('L2: reads the registry directly, never through npm (no local cache, no shell)', async () => {
+  const s = setup();
+  await s.run();
+  assert.equal(s.calls.some((c) => c.cmd === 'npm'), false);
+  assert.deepEqual(s.urls.sort(), [
+    'https://registry.npmjs.org/-/package/@anthropic-ai/claude-code/dist-tags',
+    'https://registry.npmjs.org/-/package/@openai/codex/dist-tags',
+  ]);
 });
 
 test('L2: passes when both Hosts are on their Latest release', async () => {
@@ -80,15 +92,15 @@ test('L2: a Host newer than the channel (stable user on a latest build) is not b
 });
 
 test('L2: lookup failure is a skip, not pass or warn', async () => {
-  const f = await setup({ claude: '2.1.1', npm: async () => ({ ok: false, error: 'command not found' }) }).run();
+  const f = await setup({ claude: '2.1.1', registry: async () => ({ ok: false, error: 'fetch failed' }) }).run();
   for (const h of ['claude', 'codex']) {
     assert.equal(l2(f, h).status, 'skip');
-    assert.match(l2(f, h).message, /command not found/);
+    assert.match(l2(f, h).message, /fetch failed/);
   }
 });
 
-test('L2: unexpected npm output is a skip', async () => {
-  const f = await setup({ claude: '2.1.1', npm: async () => ({ ok: true, stdout: 'garbage' }) }).run();
+test('L2: unexpected registry output is a skip', async () => {
+  const f = await setup({ claude: '2.1.1', registry: async () => ({ ok: true, json: 'garbage' }) }).run();
   assert.equal(l2(f, 'claude').status, 'skip');
   assert.equal(l2(f, 'codex').status, 'skip');
 });
@@ -98,11 +110,32 @@ test('L2: an unknown channel value is a skip', async () => {
   assert.equal(l2(f, 'claude').status, 'skip');
 });
 
-test('L2: a Host that is not installed is skipped without an npm lookup for it', async () => {
+test('L2: a Host that is not installed is skipped without a registry lookup for it', async () => {
   const s = setup({ codexInstalled: false });
   const f = await s.run();
   assert.equal(l2(f, 'codex').status, 'skip');
-  assert.equal(s.calls.some((c) => c.cmd === 'npm' && c.args.includes('@openai/codex')), false);
+  assert.equal(s.urls.some((u) => u.includes('@openai/codex')), false);
+});
+
+test('defaultFetchJson: parses JSON, reports HTTP errors and unreachable hosts without throwing', async () => {
+  const { createServer } = await import('node:http');
+  const { defaultFetchJson } = await import('../check-setup.mjs');
+  const server = createServer((req, res) => {
+    res.statusCode = req.url === '/missing' ? 404 : 200;
+    res.end('{"latest":"1.2.3"}');
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    assert.deepEqual(await defaultFetchJson(`${base}/ok`), { ok: true, json: { latest: '1.2.3' } });
+    const missing = await defaultFetchJson(`${base}/missing`);
+    assert.equal(missing.ok, false);
+    assert.match(missing.error, /404/);
+  } finally {
+    server.close();
+  }
+  const down = await defaultFetchJson(`${base}/ok`, { timeout: 2000 });
+  assert.equal(down.ok, false);
 });
 
 test('L2: a Host whose version cannot be parsed is skipped', async () => {

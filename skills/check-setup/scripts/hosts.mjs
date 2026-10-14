@@ -88,6 +88,7 @@ export async function detectHosts(env) {
 export function skipUnlessRunnable(host, decl, hostInfo, base) {
   const { label, configFile } = HOST[host];
   if (!hostInfo.installed) return skip(base, `${label} CLI is not installed (see M1)`);
-  if (decl.state !== 'ok') return skip(base, `${configFile} is missing or unreadable (see P3, P4)`);
+  if (decl.state === 'missing') return skip(base, `${configFile} is missing, so the project declares nothing for ${label}`);
+  if (decl.state !== 'ok') return skip(base, `${configFile} is not readable (${decl.error})`);
   return null;
 }

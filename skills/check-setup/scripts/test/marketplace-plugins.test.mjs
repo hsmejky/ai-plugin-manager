@@ -96,6 +96,24 @@ test('M3 is skipped for a Host whose CLI is missing', async () => {
   assert.equal(forHost(r, 'M3', 'claude')[0].status, 'pass');
 });
 
+test('M3 and M4 name the missing project config file in their skip reason', async () => {
+  const r = await run(codexFiles(['a@m'], { m: 'https://github.com/o/m.git' }), ALL_OK);
+  for (const id of ['M3', 'M4']) {
+    const [f] = forHost(r, id, 'claude');
+    assert.equal(f.status, 'skip');
+    assert.match(f.message, /\.claude\/settings\.json is missing/);
+  }
+});
+
+test('M3 and M4 name an unreadable project config file and its error in their skip reason', async () => {
+  const r = await run({ '.claude/settings.json': '{ nope' }, ALL_OK);
+  for (const id of ['M3', 'M4']) {
+    const [f] = forHost(r, id, 'claude');
+    assert.equal(f.status, 'skip');
+    assert.match(f.message, /\.claude\/settings\.json is not readable \(/);
+  }
+});
+
 test('M3 is skipped when the Host declares no marketplace', async () => {
   const r = await run({}, ALL_OK);
   assert.equal(forHost(r, 'M3', 'claude')[0].status, 'skip');

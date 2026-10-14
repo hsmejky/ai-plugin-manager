@@ -16,10 +16,11 @@ import { checkPluginDeclarations } from './checks/plugin-declarations.mjs';
 import { checkHostTrust } from './checks/host-trust.mjs';
 import { checkMarketplacePlugins } from './checks/marketplace-plugins.mjs';
 import { checkLiveSkills } from './checks/live-skills.mjs';
+import { checkCodexMarketplaceRef } from './checks/codex-marketplace-ref.mjs';
 import { detectHosts } from './hosts.mjs';
 import { loadDeclarations } from './declarations.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust, checkMarketplacePlugins, checkLiveSkills];
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkCodexMarketplaceRef, checkHostTrust, checkMarketplacePlugins, checkLiveSkills];
 
 export async function runChecks(env) {
   const context = { hosts: await detectHosts(env), decls: loadDeclarations(env.projectDir) };

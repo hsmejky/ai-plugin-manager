@@ -34,6 +34,13 @@ Fix: enable the plugin in the other Host (Codex table above; Claude `"<plugin>@<
 Rationale: a marketplace declared in both Hosts must resolve to the same repository, or the Hosts install different code under one name. Sources are compared after normalisation (Claude `github` + `repo` equals a Codex git URL for the same repository; `.git` suffix, scheme and case are ignored). A source shape that cannot be normalised (for example an unknown `source` type) cannot be compared, and two such sources are never treated as equal: P6 warns that they could not be compared instead of passing. A real difference between two recognised sources is still a fail. Skip when no marketplace is declared in both.
 Fix: set one source in both configs.
 
+### P8: Codex marketplace `ref` is not an abbreviated commit SHA
+
+Checked for every `[marketplaces.<name>]` in `.codex/config.toml` that sets `ref`. Source: `docs/research/codex-marketplace-ref-pinning-2026-10-14.md` (#26), verified on codex-cli 0.162.1.
+Rationale: Codex skips `git ls-remote` only for a full 40-hex SHA (`marketplace_upgrade/git.rs`, `is_full_git_sha`). `codex plugin marketplace add <repo>@a157af3` succeeds, but every later upgrade, including the startup auto-upgrade, fails with "git ls-remote returned empty output for marketplace source" and the plugin silently stops updating.
+Result: warn when a `ref` is 4 to 39 hex characters; pass for no `ref`, a full SHA, or a tag or branch name; skip when `.codex/config.toml` is missing or unreadable (P4 reports that) or declares no marketplace.
+Fix: set `ref` to the full 40-character SHA, or to a tag or branch name.
+
 ## Machine setup
 
 ### M1: Host CLI installed and at least the tested version

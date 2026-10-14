@@ -89,7 +89,7 @@ export function machine(opts = {}) {
   const settingsPath = join(projectDir, '.claude', 'settings.json');
   const json = (v) => ({ ok: true, stdout: JSON.stringify(v) });
   const claudeFail = (command, id, msg) => ({
-    ok: false, error: msg, stdout: JSON.stringify({ command, pluginId: id, outcome: 'failed', message: msg, failureCode: 'not_found' }),
+    ok: false, error: msg, stdout: JSON.stringify({ command, plugin: id, outcome: 'failed', message: msg, failureCode: 'not_found' }),
   });
 
   function claude(args) {

@@ -39,13 +39,13 @@ export const codexMarkets = (...names) => ({
 
 /** `claude plugin marketplace add|update --json` result. */
 export const claudeMarketplaceResult = (command, marketplace, outcome = 'ok', message = '') => ({
-  command, marketplace, outcome, scope: 'project', message,
+  command, marketplace, outcome, message,
   ...(outcome === 'failed' ? { failureCode: 'invalid_source' } : {}),
 });
 
 /** `claude plugin install|update --json` result. */
 export const claudePluginResult = (command, pluginId, outcome = 'ok', extra = {}) => ({
-  command, pluginId, outcome, scope: 'project', message: `${command} ${pluginId}`,
+  command, plugin: pluginId, ...(outcome === 'failed' ? {} : { pluginId }), outcome, scope: 'project', message: `${command} ${pluginId}`,
   ...(outcome === 'failed' ? { failureCode: 'not_found' } : {}),
   ...extra,
 });

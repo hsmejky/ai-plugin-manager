@@ -37,7 +37,28 @@ export async function listInstalledPlugins(host, env) {
   if (!r.ok) return r;
   const raw = Array.isArray(r.value) ? r.value : r.value?.installed;
   if (!Array.isArray(raw)) return { ok: false, error: 'unexpected JSON shape' };
-  return { ok: true, plugins: raw.map((entry) => normalizePlugin(host, entry)).filter(Boolean) };
+  const plugins = raw.map((entry) => normalizePlugin(host, entry)).filter(Boolean);
+  return { ok: true, plugins: plugins.filter((p) => appliesToProject(p, env.projectDir)) };
+}
+
+/** Comparable form of a path: forward slashes, no trailing slash, Git Bash `/c/x` as `c:/x`, case-folded. */
+function normalizePath(p) {
+  return String(p)
+    .replace(/\\/g, '/')
+    .replace(/^\/([a-zA-Z])\//, '$1:/')
+    .replace(/\/+$/, '')
+    .toLowerCase();
+}
+
+/**
+ * `claude plugin list --json` has one entry per project for project-scoped installs.
+ * Keep entries that apply to the checked project: user scope, or a project/local entry whose
+ * projectPath is this project. Entries without scope or projectPath (other Hosts) are kept.
+ */
+function appliesToProject(plugin, projectDir) {
+  if (!plugin.projectPath) return true;
+  if (plugin.scope !== 'project' && plugin.scope !== 'local') return true;
+  return normalizePath(plugin.projectPath) === normalizePath(projectDir);
 }
 
 export async function listMarketplaces(host, env) {

@@ -261,3 +261,40 @@ test('M5 is skipped for a Shared plugin not installed in a Host (M4 reports that
   const r = await run(files(['a@m']), { ...ALL_OK, codex: { plugins: codexInstalled(), markets: codexMarkets('m') } });
   assert.equal(find(r, 'M5')[0].status, 'skip');
 });
+
+// Real `claude plugin list --json` returns one entry per project for project-scoped installs.
+const claudeEntry = (version, scope, projectPath) => ({
+  id: 'p@m', version, scope, enabled: true, projectEnabled: true, ...(projectPath ? { projectPath } : {}), installPath: 'C:\\c\\p',
+});
+const runWith = (dir, claudePlugins, codexPlugins = codexInstalled(['p@m'])) =>
+  runChecks(envFor(dir, {
+    runCommand: stub({
+      claude: { plugins: claudePlugins, markets: claudeMarkets('m') },
+      codex: { plugins: codexPlugins, markets: codexMarkets('m') },
+    }),
+  }));
+
+test('M4 ignores a Claude Code install that belongs to another project', async () => {
+  const r = await runWith(fixture(files(['p@m'])), [claudeEntry('1.0.0', 'project', 'C:\\Users\\x\\other-project')]);
+  const m4 = forHost(r, 'M4', 'claude')[0];
+  assert.equal(m4.status, 'fail');
+  assert.match(m4.message, /p@m is not installed/);
+});
+
+test('M4 uses this project entry when another project comes first, in Windows path forms', async () => {
+  const dir = fixture(files(['p@m']));
+  const mine = dir.replace(/\//g, '\\').toUpperCase() + '\\';
+  const r = await runWith(dir, [claudeEntry('1.0.0', 'project', 'C:\\Users\\x\\other'), claudeEntry('1.0.0', 'project', mine)]);
+  assert.equal(forHost(r, 'M4', 'claude')[0].status, 'pass');
+});
+
+test('M5 compares the version of this project entry, not another project', async () => {
+  const dir = fixture(files(['p@m']));
+  const r = await runWith(dir, [claudeEntry('0.9.0', 'project', 'C:\\Users\\x\\other'), claudeEntry('1.0.0', 'project', dir)]);
+  assert.equal(find(r, 'M5')[0].status, 'pass');
+});
+
+test('M4 accepts a user-scope Claude Code entry', async () => {
+  const r = await runWith(fixture(files(['p@m'])), [claudeEntry('1.0.0', 'user')]);
+  assert.equal(forHost(r, 'M4', 'claude')[0].status, 'pass');
+});

@@ -323,3 +323,15 @@ test('L1 visibility: an openai.yaml the reader cannot judge is a note, never vis
   assert.equal(l1Main(fs, 'codex').status, 'skip');
   assert.equal(l1Main(fs, 'claude').status, 'pass');
 });
+
+test('L1 visibility: a Claude-hidden skill with an unreadable openai.yaml gets only the "cannot tell" note, no "still offers" claim (#44)', async () => {
+  const yaml = 'policy:\n  allow_implicit_invocation: *flag\n';
+  const fs = await setupGate({ flag: true, yaml });
+  const warns = l1Warns(fs);
+  assert.equal(warns.length, 1);
+  assert.equal(warns[0].host, 'codex');
+  assert.match(warns[0].message, /cannot tell/);
+  assert.doesNotMatch(warns[0].message, /still offers/);
+  assert.equal(l1Main(fs, 'claude').status, 'skip');
+  assert.equal(l1Main(fs, 'codex').status, 'skip');
+});

@@ -3,7 +3,7 @@ import { pass, warn, skip } from '../findings.mjs';
 import { CODEX_CONFIG } from '../declarations.mjs';
 
 // Codex treats a ref as a commit only when `is_full_git_sha` holds: exactly 40 ASCII hex characters,
-// untrimmed (openai/codex tag rust-v0.162.1, codex-rs/core/src/marketplace_upgrade/git.rs). Any other ref is
+// untrimmed (openai/codex tag rust-v0.162.1, codex-rs/core-plugins/src/marketplace_upgrade/git.rs). Any other ref is
 // sent to `git ls-remote` as a branch or tag name.
 const HEX = /^[0-9a-f]+$/i;
 function problem(ref) {

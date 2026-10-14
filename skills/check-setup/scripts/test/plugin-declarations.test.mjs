@@ -154,6 +154,14 @@ test('P3 passes a reserved name sourced from github.com/anthropics/', async () =
   assert.equal(p3.status, 'pass');
 });
 
+test('P3 fails a reserved name from a url-type source under github.com/anthropics/ (#56)', async () => {
+  const mkt = { source: { source: 'url', url: 'https://github.com/anthropics/some-repo.git' } };
+  const [p3] = find(await run(claude({ extraKnownMarketplaces: { 'claude-plugins-official': mkt } })), 'P3');
+  assert.equal(p3.status, 'fail');
+  assert.match(p3.message, /untrusted source/);
+  assert.match(p3.fix, /[Rr]ename/);
+});
+
 test('P7 is skipped when there is no Claude settings file or it is unreadable', async () => {
   assert.equal(find(await run({}), 'P7')[0].status, 'skip');
   assert.equal(find(await run(claude('{ "x": ')), 'P7')[0].status, 'skip');

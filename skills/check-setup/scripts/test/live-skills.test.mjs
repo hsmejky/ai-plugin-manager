@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runChecks } from '../check-setup.mjs';
-import { parseSkillNames } from '../checks/live-skills.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
 const PLUGIN = 'tools@m';
@@ -44,11 +43,6 @@ function setup({ names = ['alpha', 'beta'], answers = {}, claudeInstalled = true
 
 const l1 = (findings, host) => find(findings, 'L1').find((f) => f.host === host);
 const promptCalls = (calls) => calls.filter((c) => c.args[0] !== '--version' && c.args[0] !== 'plugin');
-
-test('parseSkillNames strips bullets, backticks and plugin prefixes, ignores prose', () => {
-  const names = parseSkillNames('Here you go:\n- `tools:alpha`\n* beta\n1. gamma\n\nNONE\n');
-  assert.deepEqual([...names].sort(), ['alpha', 'beta', 'gamma']);
-});
 
 test('L1: without --live no L1 finding and no model call', async () => {
   const s = setup();

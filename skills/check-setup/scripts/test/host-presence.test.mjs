@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runChecks } from '../check-setup.mjs';
-import { detectHosts } from '../hosts.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
 const CLAUDE_OK = '2.1.296 (Claude Code)\n';
@@ -64,14 +63,12 @@ test('M2 is skipped with a reason for a missing Host', async () => {
   assert.match(m2.message, /codex/i);
 });
 
-test('detectHosts returns installed and version per Host', async () => {
-  const hosts = await detectHosts({ runCommand: stub({ claude: CLAUDE_OK }) });
-  assert.deepEqual(hosts.claude, { installed: true, version: '2.1.296' });
-  assert.deepEqual(hosts.codex, { installed: false, version: null });
-});
-
-test('detectHosts reports installed with null version when output is unparseable', async () => {
-  const hosts = await detectHosts({ runCommand: stub({ claude: 'weird', codex: CODEX_OK }) });
-  assert.deepEqual(hosts.claude, { installed: true, version: null });
-  assert.equal(hosts.codex.version, '0.160.1');
+test('a run probes each Host version once, however many check groups use it', async () => {
+  const probes = [];
+  const runCommand = async (cmd, args) => {
+    if (args[0] === '--version') probes.push(cmd);
+    return { ok: false, error: 'command not found' };
+  };
+  await runChecks(envFor(fixture({ 'AGENTS.md': 'x' }), { runCommand, live: true }));
+  assert.deepEqual(probes.sort(), ['claude', 'codex']);
 });

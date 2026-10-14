@@ -57,7 +57,7 @@ export const HOST = {
 
 export const HOSTS = Object.keys(HOST);
 
-export function parseVersion(text) {
+function parseVersion(text) {
   const m = /(\d+)\.(\d+)\.(\d+)/.exec(text ?? '');
   return m ? `${m[1]}.${m[2]}.${m[3]}` : null;
 }

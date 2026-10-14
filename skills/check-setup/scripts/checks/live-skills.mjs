@@ -1,7 +1,7 @@
 // L1 (opt-in, env.live): ask each Host non-interactively which skills it sees and compare with the
 // skills the installed plugins are expected to provide. Runs a model call, so nothing happens without env.live.
 //
-//   expectedSkills(pluginDir) -> string[] | null   (null: directory missing)
+//   expectedSkills(pluginDir): skill names a model should see for a plugin directory (null: directory missing)
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { readJson } from '../files.mjs';
@@ -28,7 +28,7 @@ function readSkill(dir) {
  * (`.claude-plugin/plugin.json`), else every `skills/<name>/SKILL.md`. Skills with
  * `disable-model-invocation: true` are user-only and excluded.
  */
-export function expectedSkills(pluginDir) {
+function expectedSkills(pluginDir) {
   if (!existsSync(pluginDir)) return null;
   const listed = readJson(join(pluginDir, '.claude-plugin', 'plugin.json'))?.skills;
   let dirs;
@@ -53,7 +53,7 @@ const promptFor = (plugin) =>
   'Output only the names, one per line, or NONE. Do not run any tools.';
 
 /** Skill names found in a model reply: one token per line, bullets/backticks/`plugin:` prefix removed. */
-export function parseSkillNames(text) {
+function parseSkillNames(text) {
   const names = new Set();
   for (const raw of String(text ?? '').split(/\r?\n/)) {
     const line = raw.trim().replace(/^(?:[-*•]|\d+[.)])\s+/, '').replace(/[`*]/g, '').trim();

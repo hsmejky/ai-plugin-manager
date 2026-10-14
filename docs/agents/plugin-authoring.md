@@ -73,7 +73,7 @@ Codex's `$<plugin>:<skill>` form follows from its source and was observed with c
 
 ### User-only skills
 
-The Hosts hide a skill from the model by different settings ([research](../research/codex-skill-visibility-invocation-policy.md)). To make a Shared plugin skill user-only (invoked only by `/<plugin>:<skill>` or `$<plugin>:<skill>`), set both: `disable-model-invocation: true` in `SKILL.md` for Claude Code, and `policy:` / `allow_implicit_invocation: false` in `skills/<skill>/agents/openai.yaml` for Codex. Codex ignores `disable-model-invocation`, and Claude Code ignores `agents/openai.yaml`, which is Codex-only metadata inside a Shared plugin. Setting only one leaves the skill model-invocable in the other Host; `check-setup --live` warns about it (L1).
+The Hosts hide a skill from the model by different settings ([research](../research/codex-skill-visibility-invocation-policy.md)). To make a Shared plugin skill user-only (invoked only by `/<plugin>:<skill>` or `$<plugin>:<skill>`), set both: `disable-model-invocation: true` in `SKILL.md` for Claude Code, and `policy:` / `allow_implicit_invocation: false` in `skills/<skill>/agents/openai.yaml` for Codex. Codex ignores `disable-model-invocation`, and Claude Code ignores `agents/openai.yaml`, which is Codex-only metadata inside a Shared plugin. Setting only one leaves the skill model-invocable in the other Host; `check-setup --live` warns about it (L1). The `setup` skill of this plugin is the example: it writes files and runs Host commands, so it sets both and is invoked only by `/ai-plugin-manager:setup` or `$ai-plugin-manager:setup`.
 
 ### Several skills in one plugin
 

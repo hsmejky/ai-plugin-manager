@@ -17,7 +17,7 @@ Run `node --version`. If the command fails or the major version is below 20, rep
 
 ## 2. Plan (read-only)
 
-Run from the project directory:
+Run from the project directory. In Codex, request escalation for this command too, although it only reads: it starts `git` and both Host CLIs, and the Codex sandbox can stop a sandboxed command from starting child processes (seen on Windows: `spawn EPERM`, no JSON). If escalation is not possible, report that `plan` cannot run in this sandbox and stop.
 
 ```
 node "${CLAUDE_SKILL_DIR}/scripts/setup.mjs" plan

@@ -93,7 +93,17 @@ function checkP6({ claude, codex }) {
   const base = { id: 'P6', host: 'both', layer: 'project' };
   const shared = [...claude.marketplaces.keys()].filter((n) => codex.marketplaces.has(n));
   if (shared.length === 0) return skip(base, 'No marketplace is declared in both Hosts');
-  const differing = shared.filter((n) => claude.marketplaces.get(n).key !== codex.marketplaces.get(n).key);
+  // A source shape that normalises to '' is unrecognised: two of them must not count as equal.
+  const keys = (n) => [claude.marketplaces.get(n).key, codex.marketplaces.get(n).key];
+  const uncomparable = shared.filter((n) => keys(n).includes(''));
+  const differing = shared.filter((n) => !uncomparable.includes(n) && keys(n)[0] !== keys(n)[1]);
+  if (differing.length === 0 && uncomparable.length > 0) {
+    return warn(
+      base,
+      `The source of marketplace ${uncomparable.map((n) => `"${n}"`).join(', ')} could not be compared between the Hosts: the source shape is not recognised in ${CLAUDE_SETTINGS} or ${CODEX_CONFIG}`,
+      `Check by hand that both Hosts point at the same repository, or use a "github" or "git" source in ${CLAUDE_SETTINGS} and source_type = "git" with a URL in ${CODEX_CONFIG}.`,
+    );
+  }
   if (differing.length === 0) return pass(base, 'Shared marketplaces have the same source in both Hosts');
   const name = differing[0];
   const want = codexUrlFor(claude.marketplaces.get(name).key) || '<the same source as in Claude settings>';

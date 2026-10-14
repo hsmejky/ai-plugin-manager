@@ -76,3 +76,17 @@ test('P6 is skipped when no marketplace is declared in both Hosts', async () => 
   const files = { ...claude(['a@m'], { m: 'o/m' }), ...codex([], { n: 'https://github.com/o/n.git' }) };
   assert.equal(find(await run(files), 'P6')[0].status, 'skip');
 });
+
+test('P6 warns, not passes, when a source shape is not recognised and cannot be compared', async () => {
+  const files = {
+    '.claude/settings.json': JSON.stringify({
+      enabledPlugins: { 'a@m': true },
+      extraKnownMarketplaces: { m: { source: { source: 'npm', package: 'x' } } },
+    }),
+    '.codex/config.toml': '[marketplaces.m]\nsource_type = "registry"\nsource = "x"\n\n[plugins."a@m"]\nenabled = true\n',
+  };
+  const [p6] = find(await run(files), 'P6');
+  assert.equal(p6.status, 'warn');
+  assert.match(p6.message, /could not be compared/);
+  assert.match(p6.message, /"m"/);
+});

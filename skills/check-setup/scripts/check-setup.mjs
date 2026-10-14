@@ -76,6 +76,7 @@ export async function main(argv) {
   const findings = await runChecks({
     projectDir,
     homeDir: homedir(),
+    codexHome: process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : undefined,
     platform: process.platform,
     runCommand: defaultRunCommand,
     fetchJson: defaultFetchJson,

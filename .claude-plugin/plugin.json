@@ -1,12 +1,13 @@
 {
   "name": "ai-plugin-manager",
-  "version": "0.5.1",
-  "description": "Verifies the shared Claude Code and Codex agent setup of a project.",
+  "version": "0.6.0",
+  "description": "Verifies and sets up (installs and updates) the shared Claude Code and Codex agent setup of a project.",
   "author": {
     "name": "Jan Smejkal"
   },
   "repository": "https://github.com/hsmejky/ai-plugin-manager",
   "skills": [
-    "./skills/check-setup"
+    "./skills/check-setup",
+    "./skills/setup"
   ]
 }

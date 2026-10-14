@@ -33,3 +33,24 @@ export const codexMarkets = (...names) => ({
     marketplaceSource: { sourceType: 'git', source: `https://github.com/o/${name}.git` },
   })),
 });
+
+// Write-command outputs used by the setup skill's tests (skills/setup/scripts/test/fake-host.mjs).
+// Shapes follow docs/research/plugin-install-update-cli-2026-10-14.md (Claude Code 2.1.299, codex-cli 0.162.1).
+
+/** `claude plugin marketplace add|update --json` result. */
+export const claudeMarketplaceResult = (command, marketplace, outcome = 'ok', message = '') => ({
+  command, marketplace, outcome, scope: 'project', message,
+  ...(outcome === 'failed' ? { failureCode: 'invalid_source' } : {}),
+});
+
+/** `claude plugin install|update --json` result. */
+export const claudePluginResult = (command, pluginId, outcome = 'ok', extra = {}) => ({
+  command, pluginId, outcome, scope: 'project', message: `${command} ${pluginId}`,
+  ...(outcome === 'failed' ? { failureCode: 'not_found' } : {}),
+  ...extra,
+});
+
+/** `codex plugin marketplace upgrade --json` result. */
+export const codexUpgradeResult = (names, errors = []) => ({
+  selectedMarketplaces: names, upgradedRoots: names.map((n) => `C:\\m\\${n}`), errors,
+});

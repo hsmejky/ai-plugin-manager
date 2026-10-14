@@ -47,6 +47,14 @@ Pass: both answer `English` (the project language rule in `AGENTS.md`). Any spec
 
 Negative check: run the `codex exec` skills command from a directory outside the repository. It must output `NONE`, provided the plugin is not also enabled in the user-level Codex config. Automated in the same opt-in test.
 
+## Setup skill
+
+Run the plan step against the real Hosts (read-only: it runs only `--version` and `list --json`): `node skills/setup/scripts/setup.mjs plan`. Do not run `apply` on the real machine to test; the live test does it in temporary homes: `SETUP_LIVE=1 node --test skills/setup/scripts/test/live-setup.test.mjs` ([`live-setup.test.mjs`](../../skills/setup/scripts/test/live-setup.test.mjs); network, no login). It seeds trust in temporary `CLAUDE_CONFIG_DIR`, `HOME`, `USERPROFILE` and `CODEX_HOME` and a temporary git copy of the Project setup, runs `plan`, `apply --expect`, check-setup and a second `plan`, and checks that the committed files keep their bytes, that each Host's install contains `skills/check-setup/scripts/check-setup.mjs`, and that the real `~/.codex/config.toml` and `~/.claude/settings.json` keep their SHA-256 (`~/.claude.json` only must not mention the test project: a running Claude Code session rewrites it itself).
+
+Result (Claude Code 2.1.299, codex-cli 0.162.1, Windows, 2026-10-14): passed. The named `codex plugin marketplace upgrade <name>` installs the enabled plugins of a fresh, trusted project (Codex `plugin list` failed before it and showed both plugins installed after it), so the skill uses the named form. The marketplace content installed in that run was `main` of this repository, which has no `skills/setup/` until this change is merged, so `skills/setup/` next to `check-setup.mjs` in the installs is not yet asserted.
+
+Still manual: invoking the skill through each Host's model (plan shown, waits for confirmation); `setup` hidden from the model in both Hosts (`claude -p` and `codex exec` skills prompts omit it, `$ai-plugin-manager:setup` loads it); Codex deleting the old plugin version while the skill runs, and Windows open files; effect after `/reload-plugins` or a new session; Linux and macOS live runs.
+
 ## Manual checks of Host behaviour
 
 Claims in this repository's docs and in `check-setup` fixes that describe how a Host behaves and that no test covers. A Host release can change any of them without a test failing, so recheck the row after a Host release and update the versions. The tested versions of check M1 (`testedVersion` in `skills/check-setup/scripts/hosts.mjs`, checklist M1, the sharing doc prerequisites) are the Host versions this suite was last verified on: when you rerun this table or the Host CLI tests (`CHECK_SETUP_HOST_CLI=1`) on newer Host versions and they pass, raise all three in the same commit. Versions are the ones the claim was last confirmed on (audit of 2026-10-14 unless noted); "source" rows were read from Host source or docs, not run.

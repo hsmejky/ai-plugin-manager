@@ -31,3 +31,5 @@ jobs:
         run: node --test test/doc-sync.test.mjs
       - name: check-setup skill
         run: node --test skills/check-setup/scripts/test/*.test.mjs
+      - name: setup skill
+        run: node --test skills/setup/scripts/test/*.test.mjs

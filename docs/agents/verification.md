@@ -32,7 +32,9 @@ claude -p "List the names of all skills available to you that come from the <plu
 codex exec --skip-git-repo-check "List the names of all skills available to you that come from the <plugin> plugin. Output only the names, one per line, or NONE. Do not run any tools."
 ```
 
-Pass: both Hosts list the same set of names. Skills with `disable-model-invocation: true` are user-only slash commands and do not appear in a model's list, so compare against the skills listed in the `skills` array of the plugin manifest (`.claude-plugin/plugin.json`) that lack that flag, not against the full command list or every `SKILL.md` in the plugin's source repository.
+Pass: each Host lists every skill it should offer the model. Each Host hides a user-only skill by a different setting: Claude Code by `disable-model-invocation: true` in `SKILL.md`, Codex by `policy.allow_implicit_invocation: false` in the skill's `agents/openai.yaml` (Codex ignores `disable-model-invocation`; it hides the skill only for exactly `false`, and `$skill` still loads it). So the two lists equal each other only for skills that set both or neither; compare each Host against the skills in the `skills` array of the plugin manifest (`.claude-plugin/plugin.json`) that the Host does not hide, not against the full command list or every `SKILL.md` in the plugin's source repository. `check-setup --live` warns when the two settings disagree for a skill.
+
+Not yet run live: that Codex omits a skill with `allow_implicit_invocation: false` from its list while `$<skill>` still loads it (for example `ask-matt` of `mattpocock-skills`). The rule comes from Codex source (`openai/codex` tag `rust-v0.162.1`, [research](../research/codex-skill-visibility-invocation-policy.md)), not from a run. Check it by hand with `codex exec` and record the codex-cli version here.
 
 Instructions:
 

@@ -1,34 +1,49 @@
 // L1 (opt-in, env.live): ask each Host non-interactively which skills it sees and compare with the
 // skills the installed plugins are expected to provide. Runs a model call, so nothing happens without env.live.
 //
-//   expectedSkills(pluginDir): skill names a model should see for a plugin directory (null: directory missing)
+//   pluginSkills(pluginDir) / expectedSkills(skills, host): skills of a plugin directory and the names a Host's model should see
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { readJson } from '../files.mjs';
-import { pass, fail, skip } from '../findings.mjs';
+import { pass, fail, skip, warn } from '../findings.mjs';
 import { HOST, HOSTS, skipUnlessRunnable } from '../hosts.mjs';
 
 import { listInstalledPlugins } from '../plugins.mjs';
 
 
 
-/** { name, userOnly } from a skill directory, or null when it has no SKILL.md. */
+/**
+ * True when `agents/openai.yaml` sets `policy.allow_implicit_invocation: false` (Codex hides the skill
+ * from the model only for exactly that boolean). Reads the two keys by indentation, not a full YAML parse.
+ */
+function codexHidden(dir) {
+  const file = join(dir, 'agents', 'openai.yaml');
+  if (!existsSync(file)) return false;
+  let inPolicy = false;
+  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    if (/^\S/.test(line)) inPolicy = /^policy:\s*(#.*)?$/.test(line);
+    else if (inPolicy && /^\s+allow_implicit_invocation:\s*false\s*(#.*)?$/.test(line)) return true;
+  }
+  return false;
+}
+
+/** { name, claudeHidden, codexHidden } from a skill directory, or null when it has no SKILL.md. */
 function readSkill(dir) {
   const file = join(dir, 'SKILL.md');
   if (!existsSync(file)) return null;
   const text = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   const fm = /^---\n([\s\S]*?)\n---/.exec(text)?.[1] ?? '';
   const name = /^name:\s*["']?([^"'\n]+?)["']?\s*$/m.exec(fm)?.[1] ?? basename(dir);
-  const userOnly = /^disable-model-invocation:\s*true\s*$/m.test(fm);
-  return { name, userOnly };
+  const claudeHidden = /^disable-model-invocation:\s*true\s*$/m.test(fm);
+  return { name, claudeHidden, codexHidden: codexHidden(dir) };
 }
 
 /**
- * Names of the skills a model should see for a plugin directory: the manifest `skills` array
- * (`.claude-plugin/plugin.json`), else every `skills/<name>/SKILL.md`. Skills with
- * `disable-model-invocation: true` are user-only and excluded.
+ * The skills of a plugin directory: the manifest `skills` array (`.claude-plugin/plugin.json`), else
+ * every `skills/<name>/SKILL.md` (null: directory missing). Each Host hides a skill from the model by its
+ * own setting: Claude Code by `disable-model-invocation: true`, Codex by `allow_implicit_invocation: false`.
  */
-function expectedSkills(pluginDir) {
+function pluginSkills(pluginDir) {
   if (!existsSync(pluginDir)) return null;
   const listed = readJson(join(pluginDir, '.claude-plugin', 'plugin.json'))?.skills;
   let dirs;
@@ -40,8 +55,33 @@ function expectedSkills(pluginDir) {
       ? readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => join(root, e.name))
       : [];
   }
-  const names = dirs.map(readSkill).filter((s) => s && !s.userOnly).map((s) => s.name);
-  return [...new Set(names)].sort();
+  return dirs.map(readSkill).filter(Boolean);
+}
+
+/** Names of the skills the Host's model should see (sorted, unique). */
+function expectedSkills(skills, host) {
+  const hidden = host === 'claude' ? 'claudeHidden' : 'codexHidden';
+  return [...new Set(skills.filter((s) => !s[hidden]).map((s) => s.name))].sort();
+}
+
+/** Warnings for skills one Host hides and the other still offers to the model; `host` is the hiding one. */
+function visibilityWarnings(base, id, skills, host) {
+  const mine = host === 'claude' ? 'claudeHidden' : 'codexHidden';
+  const other = host === 'claude' ? 'codexHidden' : 'claudeHidden';
+  const [label, otherLabel] = host === 'claude' ? ['Claude Code', 'Codex'] : ['Codex', 'Claude Code'];
+  const setting = {
+    claude: '`disable-model-invocation: true` in SKILL.md',
+    codex: '`policy.allow_implicit_invocation: false` in agents/openai.yaml',
+  };
+  return skills
+    .filter((s) => s[mine] && !s[other])
+    .map((s) =>
+      warn(
+        base,
+        `${id}: skill ${s.name} is hidden from the model in ${label} (${setting[host]}) but ${otherLabel} still offers it`,
+        `To make the skill user-only in both Hosts, set both ${setting.claude} and ${setting.codex}; to keep it model-invocable in both, remove ${setting[host].split(' in ')[0]}.`,
+      ),
+    );
 }
 
 // ---- L1 check ----------------------------------------------------------------------------------
@@ -79,7 +119,7 @@ function settingsErrors(stderr) {
     .filter((l) => /\(.+\):/.test(l));
 }
 
-async function checkHost(host, decl, hostInfo, env) {
+async function checkHost(host, decl, hostInfo, env, warnings) {
   const base = { id: 'L1', host, layer: 'machine' };
   const { label, configFile } = HOST[host];
   const skipped = skipUnlessRunnable(host, decl, hostInfo, base);
@@ -98,7 +138,9 @@ async function checkHost(host, decl, hostInfo, env) {
       continue;
     }
     const dir = HOST[host].pluginDir(plugin, env);
-    const expected = dir ? expectedSkills(dir) : null;
+    const skills = dir ? pluginSkills(dir) : null;
+    const expected = skills && expectedSkills(skills, host);
+    if (skills) warnings.push(...visibilityWarnings(base, id, skills, host));
     if (expected === null) {
       notes.push(`${id}: plugin directory not found (${dir || 'no installPath'}), cannot determine its skills`);
       continue;
@@ -140,6 +182,9 @@ async function checkHost(host, decl, hostInfo, env) {
 export async function checkLiveSkills(env, { hosts, decls }) {
   if (!env.live) return [];
   const findings = [];
-  for (const host of HOSTS) findings.push(await checkHost(host, decls[host], hosts[host], env));
+  for (const host of HOSTS) {
+    const warnings = [];
+    findings.push(await checkHost(host, decls[host], hosts[host], env, warnings), ...warnings);
+  }
   return findings;
 }

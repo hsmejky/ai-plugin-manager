@@ -2,27 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { runChecks } from '../check-setup.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
-
-// Real CLI JSON shapes (real shapes: see the manual checks in docs/agents/verification.md).
-const claudeInstalled = (...entries) =>
-  entries.map(([id, version = '1.0.0', enabled = false]) => ({
-    id, version, scope: 'project', enabled, installPath: `C:\\cache\\${id}`, projectEnabled: false,
-  }));
-const codexInstalled = (...entries) => ({
-  installed: entries.map(([pluginId, version = '1.0.0', enabled = true]) => ({
-    pluginId, name: pluginId.split('@')[0], marketplaceName: pluginId.split('@')[1], version,
-    installed: true, enabled, source: { source: 'local', path: 'C:\\x' },
-  })),
-  available: [],
-});
-const claudeMarkets = (...names) =>
-  names.map((name) => ({ name, source: 'github', repo: `o/${name}`, installLocation: `C:\\m\\${name}` }));
-const codexMarkets = (...names) => ({
-  marketplaces: names.map((name) => ({
-    name, root: `C:\\m\\${name}`,
-    marketplaceSource: { sourceType: 'git', source: `https://github.com/o/${name}.git` },
-  })),
-});
+// Real CLI JSON shapes; host-cli.test.mjs compares them with the installed CLIs.
+import { claudeInstalled, claudeEntry, codexInstalled, claudeMarkets, codexMarkets } from './host-stubs.mjs';
 
 const MISSING = { ok: false, error: 'command not found' };
 const json = (v) => ({ ok: true, stdout: JSON.stringify(v) });
@@ -298,9 +279,6 @@ test('M5 is skipped for a Shared plugin not installed in a Host (M4 reports that
 });
 
 // Real `claude plugin list --json` returns one entry per project for project-scoped installs.
-const claudeEntry = (version, scope, projectPath) => ({
-  id: 'p@m', version, scope, enabled: true, projectEnabled: true, ...(projectPath ? { projectPath } : {}), installPath: 'C:\\c\\p',
-});
 const runWith = (dir, claudePlugins, codexPlugins = codexInstalled(['p@m'])) =>
   runChecks(envFor(dir, {
     runCommand: stub({

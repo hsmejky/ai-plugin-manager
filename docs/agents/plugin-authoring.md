@@ -71,6 +71,10 @@ Both Hosts namespace a plugin skill under the plugin manifest `name` ([research 
 
 Codex's `$<plugin>:<skill>` form follows from its source and was observed with codex-cli 0.160.1; OpenAI's docs describe only `$skill`, `/skills` and implicit matching by description, not the plugin namespace ([research §3](../research/plugin-authoring-both-hosts.md#3-skill-registration-exposure-and-invocation)).
 
+### User-only skills
+
+The Hosts hide a skill from the model by different settings ([research](../research/codex-skill-visibility-invocation-policy.md)). To make a Shared plugin skill user-only (invoked only by `/<plugin>:<skill>` or `$<plugin>:<skill>`), set both: `disable-model-invocation: true` in `SKILL.md` for Claude Code, and `policy:` / `allow_implicit_invocation: false` in `skills/<skill>/agents/openai.yaml` for Codex. Codex ignores `disable-model-invocation`, and Claude Code ignores `agents/openai.yaml`, which is Codex-only metadata inside a Shared plugin. Setting only one leaves the skill model-invocable in the other Host; `check-setup --live` warns about it (L1).
+
 ### Naming and descriptions
 
 - Write the description as what the skill does, then when to use it ("Use when …"), as `check-setup` does. Codex can pick a skill by its description alone ([research §3](../research/plugin-authoring-both-hosts.md#3-skill-registration-exposure-and-invocation)).

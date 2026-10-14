@@ -29,6 +29,9 @@ export function shapeMismatches(stub, real, path = '') {
   });
 }
 
+const FLAG = /(?<![\w-])--[a-z][a-z0-9-]*/g;
+const WORD = /^[a-z][a-z-]*$/;
+
 /**
  * Subcommand names (aliases included) from the `Commands:` section of a commander (Claude Code) or
  * clap (Codex) help text, and every `--flag` the text mentions.
@@ -45,8 +48,6 @@ export function helpEntries(help) {
   return { commands, flags };
 }
 
-const FLAG = /(?<![\w-])--[a-z][a-z0-9-]*/g;
-const WORD = /^[a-z][a-z-]*$/;
 
 /**
  * Host commands named in a doc or source text: `<host> plugin [marketplace] [<sub>] ... --flag` and

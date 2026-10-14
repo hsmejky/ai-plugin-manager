@@ -8,7 +8,7 @@
 import { join } from 'node:path';
 import { readJson } from '../files.mjs';
 import { pass, warn, skip } from '../findings.mjs';
-import { HOST, HOSTS, compareVersions } from '../hosts.mjs';
+import { HOST, HOSTS, compareVersions, isRelease } from '../hosts.mjs';
 
 const PACKAGE = { claude: '@anthropic-ai/claude-code', codex: '@openai/codex' };
 const UPDATE = { claude: 'claude update', codex: 'codex update' };
@@ -43,8 +43,6 @@ async function distTags(host, env) {
   return { ok: false, error: `unexpected registry answer for ${PACKAGE[host]}` };
 }
 
-const validVersion = (v) => typeof v === 'string' && /^\d+\.\d+\.\d+$/.test(v);
-
 async function checkHost(host, hostInfo, env) {
   const base = { id: 'L2', host, layer: 'machine' };
   const { label } = HOST[host];
@@ -67,7 +65,7 @@ async function checkHost(host, hostInfo, env) {
   const looked = await distTags(host, env);
   if (!looked.ok) return skip(base, `Could not look up the latest ${label} release (${looked.error})`);
   const latest = looked.tags[channel];
-  if (!validVersion(latest)) return skip(base, `the registry has no "${channel}" version for ${PACKAGE[host]}`);
+  if (!isRelease(latest)) return skip(base, `the registry has no "${channel}" version for ${PACKAGE[host]}`);
 
   if (compareVersions(hostInfo.version, latest) >= 0) {
     return pass(base, `${label} ${hostInfo.version} is at the Latest release (${latest}) on ${channelNote}`);

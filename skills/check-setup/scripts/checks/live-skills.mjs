@@ -7,11 +7,8 @@ import { basename, join } from 'node:path';
 import { readJson } from '../files.mjs';
 import { pass, fail, skip, warn } from '../findings.mjs';
 import { HOST, HOSTS, skipUnlessRunnable } from '../hosts.mjs';
-
 import { implicitInvocationDisabled } from '../openai-yaml.mjs';
 import { listInstalledPlugins } from '../plugins.mjs';
-
-
 
 /** The readSkill field that says a Host hides the skill from its model. */
 const HIDDEN_KEY = { claude: 'claudeHidden', codex: 'codexHidden' };

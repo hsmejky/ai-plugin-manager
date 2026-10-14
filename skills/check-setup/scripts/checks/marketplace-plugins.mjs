@@ -1,10 +1,9 @@
 // M3-M5: marketplaces and plugins installed on this machine, per Host.
 // Listing the CLI's plugins and marketplaces lives in ../plugins.mjs.
 import { warn, fail, pass, skip } from '../findings.mjs';
-import { HOST, HOSTS, compareVersions, skipUnlessRunnable } from '../hosts.mjs';
+import { HOST, HOSTS, compareVersions, isRelease, skipUnlessRunnable } from '../hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
 
-const RELEASE = /^\d+\.\d+\.\d+$/;
 // Versions a Host prints when the plugin has none: Claude Code `unknown`, Codex `local`.
 const PLACEHOLDER_VERSIONS = new Set(['unknown', 'local']);
 const NO_MANIFEST = /marketplace root does not contain a supported manifest/i;
@@ -100,11 +99,13 @@ async function checkM5(decls, hostInfos, env) {
     const inCodex = lists.codex.plugins.find((p) => p.id === id);
     if (!inClaude || !inCodex) continue; // M4 reports a missing install
     compared++;
-    const c = inClaude.version;
-    const x = inCodex.version;
-    if (c != null && c === x && !PLACEHOLDER_VERSIONS.has(c)) continue; // identical real strings: nothing to compare
-    if (RELEASE.test(c ?? '') && RELEASE.test(x ?? '')) drift.push({ id, claude: c, codex: x });
-    else unknown.push({ id, claude: c, codex: x });
+    const claudeVersion = inClaude.version;
+    const codexVersion = inCodex.version;
+    // identical real strings: nothing to compare
+    if (claudeVersion != null && claudeVersion === codexVersion && !PLACEHOLDER_VERSIONS.has(claudeVersion)) continue;
+    const versions = { id, claude: claudeVersion, codex: codexVersion };
+    if (isRelease(claudeVersion) && isRelease(codexVersion)) drift.push(versions);
+    else unknown.push(versions);
   }
   if (compared === 0) return skip(base, 'No Shared plugin is installed in both Hosts (see M4)');
   if (drift.length === 0 && unknown.length === 0) return pass(base, 'Shared plugins have the same version in both Hosts');

@@ -44,3 +44,58 @@ test('P3 is skipped when the project has no Claude settings', async () => {
   const [p3] = find(await run({}), 'P3');
   assert.equal(p3.status, 'skip');
 });
+
+test('P3 fix snippet includes "autoUpdate": true', async () => {
+  const [p3] = find(await run(claude({ enabledPlugins: { 'a@m': true } })), 'P3');
+  assert.match(p3.fix, /"autoUpdate": true/);
+});
+
+const mkt = (extra) => ({ ...ghMkt('o/m'), ...extra });
+
+test('P7 passes when every declared marketplace has "autoUpdate": true', async () => {
+  const [p7] = find(await run(claude({ extraKnownMarketplaces: { m: mkt({ autoUpdate: true }) } })), 'P7');
+  assert.equal(p7.status, 'pass');
+  assert.equal(p7.host, 'claude');
+  assert.equal(p7.layer, 'project');
+});
+
+test('P7 warns with an exact fix when "autoUpdate" is missing', async () => {
+  const [p7] = find(await run(claude({ extraKnownMarketplaces: { m: mkt() } })), 'P7');
+  assert.equal(p7.status, 'warn');
+  assert.match(p7.message, /"m"/);
+  assert.match(p7.fix, /"autoUpdate": true/);
+  assert.match(p7.fix, /extraKnownMarketplaces/);
+  assert.match(p7.fix, /"m"/);
+});
+
+test('P7 warns when "autoUpdate" is false', async () => {
+  const [p7] = find(await run(claude({ extraKnownMarketplaces: { m: mkt({ autoUpdate: false }) } })), 'P7');
+  assert.equal(p7.status, 'warn');
+});
+
+test('P7 names only the marketplaces that lack it', async () => {
+  const [p7] = find(
+    await run(claude({ extraKnownMarketplaces: { ok: mkt({ autoUpdate: true }), bad: mkt() } })),
+    'P7',
+  );
+  assert.equal(p7.status, 'warn');
+  assert.match(p7.message, /"bad"/);
+  assert.doesNotMatch(p7.message, /"ok"/);
+});
+
+test('P7 does not warn for the official marketplace, whose default is already on', async () => {
+  const [p7] = find(
+    await run(claude({ extraKnownMarketplaces: { 'claude-plugins-official': mkt() } })),
+    'P7',
+  );
+  assert.equal(p7.status, 'skip');
+});
+
+test('P7 is skipped when there is no Claude settings file or it is unreadable', async () => {
+  assert.equal(find(await run({}), 'P7')[0].status, 'skip');
+  assert.equal(find(await run(claude('{ "x": ')), 'P7')[0].status, 'skip');
+});
+
+test('P7 is skipped when no marketplace is declared', async () => {
+  assert.equal(find(await run(claude({ enabledPlugins: {} })), 'P7')[0].status, 'skip');
+});

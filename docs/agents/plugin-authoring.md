@@ -31,7 +31,7 @@ No Codex manifest is needed for the current plugin, and none is added here ([res
 | `plugins[].description` | Entry description. |
 | `plugins[].category` | Category. Codex reads it; OpenAI's docs call it required, Codex's source defaults it ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). Keep it set. |
 
-Codex also reads an optional `policy` per entry, and keeps other entry keys as an inline fallback manifest when the plugin root has no manifest file ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). In Claude Code, entry fields combine with `plugin.json` according to the entry's `strict` flag ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)).
+Codex also reads a `policy` per entry; OpenAI's docs call it required, Codex's source treats it as optional and this repo's entry omits it ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)), and keeps other entry keys as an inline fallback manifest when the plugin root has no manifest file ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). In Claude Code, entry fields combine with `plugin.json` according to the entry's `strict` flag ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)).
 ## Plugin manifest
 
 `.claude-plugin/plugin.json` describes the plugin. Claude Code requires only `name` when the file exists and strips unknown top-level keys with a validation warning ([research §2](../research/plugin-authoring-both-hosts.md#2-does-codex-need-its-own-manifest)). Codex reads `name`, `version`, `description`, `keywords`, `skills`, `mcpServers`, `apps`, `hooks`, `interface` and `extensions`, and ignores other keys ([research §2](../research/plugin-authoring-both-hosts.md#2-does-codex-need-its-own-manifest)).
@@ -70,6 +70,10 @@ Both Hosts namespace a plugin skill under the plugin manifest `name` ([research 
 | Implicit use | | matched by description |
 
 Codex's `$<plugin>:<skill>` form follows from its source and was observed with codex-cli 0.160.1; OpenAI's docs describe only `$skill`, `/skills` and implicit matching by description, not the plugin namespace ([research §3](../research/plugin-authoring-both-hosts.md#3-skill-registration-exposure-and-invocation)).
+
+### User-only skills
+
+The Hosts hide a skill from the model by different settings ([research](../research/codex-skill-visibility-invocation-policy.md)). To make a Shared plugin skill user-only (invoked only by `/<plugin>:<skill>` or `$<plugin>:<skill>`), set both: `disable-model-invocation: true` in `SKILL.md` for Claude Code, and `policy:` / `allow_implicit_invocation: false` in `skills/<skill>/agents/openai.yaml` for Codex. Codex ignores `disable-model-invocation`, and Claude Code ignores `agents/openai.yaml`, which is Codex-only metadata inside a Shared plugin. Setting only one leaves the skill model-invocable in the other Host; `check-setup --live` warns about it (L1).
 
 ### Naming and descriptions
 
@@ -118,7 +122,7 @@ Claude Code updates when the `version` string changes; Codex updates when the ma
 
 ## Test an unreleased change locally
 
-Run the repository tests first: `node --test test/markdown-links.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root.
+Run the repository tests first: `node --test test/markdown-links.test.mjs test/doc-sync.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root. On Claude Code 2.1.299 a good result ends with `Validation passed with warnings`: the warning `CLAUDE.md at the plugin root is not loaded as project context` is inherent to this layout (ADR 0001) and the Project setup needs that `CLAUDE.md`, so do not remove it. The advice to add a one-step install line (`/plugin install ai-plugin-manager --marketplace hsmejky/ai-plugin-manager`) is optional; errors are what to fix.
 
 ### Claude Code
 

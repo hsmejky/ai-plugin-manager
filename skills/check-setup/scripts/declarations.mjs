@@ -33,7 +33,7 @@ function buildClaude(json) {
   for (const [id, on] of Object.entries(obj(obj(json).enabledPlugins))) if (on === true) plugins.add(id);
   for (const [name, entry] of Object.entries(obj(obj(json).extraKnownMarketplaces))) {
     const raw = obj(entry).source;
-    marketplaces.set(name, { key: sourceKey(raw), raw });
+    marketplaces.set(name, { key: sourceKey(raw), raw, autoUpdate: obj(entry).autoUpdate });
   }
   return { plugins, marketplaces };
 }
@@ -43,7 +43,7 @@ function buildCodex(toml) {
   const marketplaces = new Map();
   for (const [id, entry] of Object.entries(obj(toml.plugins))) if (obj(entry).enabled === true) plugins.add(id);
   for (const [name, entry] of Object.entries(obj(toml.marketplaces))) {
-    const raw = { source: obj(entry).source_type, url: obj(entry).source };
+    const raw = { source: obj(entry).source_type, url: obj(entry).source, ref: obj(entry).ref };
     marketplaces.set(name, { key: sourceKey(raw), raw });
   }
   return { plugins, marketplaces };

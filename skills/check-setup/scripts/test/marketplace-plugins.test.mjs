@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { runChecks } from '../check-setup.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
-// Real CLI JSON shapes (see research host-cli-shapes.md).
+// Real CLI JSON shapes (real shapes: see the manual checks in docs/agents/verification.md).
 const claudeInstalled = (...entries) =>
   entries.map(([id, version = '1.0.0', enabled = false]) => ({
     id, version, scope: 'project', enabled, installPath: `C:\\cache\\${id}`, projectEnabled: false,
@@ -240,6 +240,41 @@ test('M5 warns on version drift between Hosts, naming both versions', async () =
   assert.match(f.fix, /update/);
 });
 
+test('M5 fix names only commands that exist, per Host', async () => {
+  const older = async (claude, codex) => {
+    const r = await run(files(['a@m']), {
+      claude: { plugins: claudeInstalled(['a@m', claude]), markets: claudeMarkets('m') },
+      codex: { plugins: codexInstalled(['a@m', codex]), markets: codexMarkets('m') },
+    });
+    return find(r, 'M5')[0].fix;
+  };
+  const codexOlder = await older('1.4.0', '1.3.1');
+  assert.match(codexOlder, /codex plugin marketplace upgrade m/);
+  assert.match(codexOlder, /Codex session/);
+  assert.doesNotMatch(codexOlder, /codex plugin (remove|add)/);
+  assert.doesNotMatch(codexOlder, /marketplace update/);
+  const claudeOlder = await older('1.3.1', '1.4.0');
+  assert.match(claudeOlder, /claude plugin marketplace update m/);
+  assert.match(claudeOlder, /claude plugin update a@m/);
+  assert.doesNotMatch(claudeOlder, /codex /);
+  assert.doesNotMatch(claudeOlder, /<host>/);
+});
+
+test('M5 does not crash when one Host reports no version, and gives fix text for both Hosts (#20)', async () => {
+  for (const [claude, codex] of [[null, '1.4.0'], ['1.3.1', null]]) {
+    const r = await run(files(['a@m']), {
+      claude: { plugins: claudeInstalled(['a@m', claude]), markets: claudeMarkets('m') },
+      codex: { plugins: codexInstalled(['a@m', codex]), markets: codexMarkets('m') },
+    });
+    const [f] = find(r, 'M5');
+    assert.equal(f.status, 'warn');
+    assert.match(f.message, /a@m/);
+    assert.doesNotMatch(f.message, /null|undefined/);
+    assert.match(f.fix, /claude plugin update a@m/);
+    assert.match(f.fix, /codex plugin marketplace upgrade m/);
+  }
+});
+
 test('M5 only compares Shared plugins (intersection)', async () => {
   const f = {
     ...claudeFiles(['a@m', 'c@m'], { m: 'o/m' }),
@@ -260,4 +295,41 @@ test('M5 is skipped when a Host is missing or there are no Shared plugins', asyn
 test('M5 is skipped for a Shared plugin not installed in a Host (M4 reports that)', async () => {
   const r = await run(files(['a@m']), { ...ALL_OK, codex: { plugins: codexInstalled(), markets: codexMarkets('m') } });
   assert.equal(find(r, 'M5')[0].status, 'skip');
+});
+
+// Real `claude plugin list --json` returns one entry per project for project-scoped installs.
+const claudeEntry = (version, scope, projectPath) => ({
+  id: 'p@m', version, scope, enabled: true, projectEnabled: true, ...(projectPath ? { projectPath } : {}), installPath: 'C:\\c\\p',
+});
+const runWith = (dir, claudePlugins, codexPlugins = codexInstalled(['p@m'])) =>
+  runChecks(envFor(dir, {
+    runCommand: stub({
+      claude: { plugins: claudePlugins, markets: claudeMarkets('m') },
+      codex: { plugins: codexPlugins, markets: codexMarkets('m') },
+    }),
+  }));
+
+test('M4 ignores a Claude Code install that belongs to another project', async () => {
+  const r = await runWith(fixture(files(['p@m'])), [claudeEntry('1.0.0', 'project', 'C:\\Users\\x\\other-project')]);
+  const m4 = forHost(r, 'M4', 'claude')[0];
+  assert.equal(m4.status, 'fail');
+  assert.match(m4.message, /p@m is not installed/);
+});
+
+test('M4 uses this project entry when another project comes first, in Windows path forms', async () => {
+  const dir = fixture(files(['p@m']));
+  const mine = dir.replace(/\//g, '\\').toUpperCase() + '\\';
+  const r = await runWith(dir, [claudeEntry('1.0.0', 'project', 'C:\\Users\\x\\other'), claudeEntry('1.0.0', 'project', mine)]);
+  assert.equal(forHost(r, 'M4', 'claude')[0].status, 'pass');
+});
+
+test('M5 compares the version of this project entry, not another project', async () => {
+  const dir = fixture(files(['p@m']));
+  const r = await runWith(dir, [claudeEntry('0.9.0', 'project', 'C:\\Users\\x\\other'), claudeEntry('1.0.0', 'project', dir)]);
+  assert.equal(find(r, 'M5')[0].status, 'pass');
+});
+
+test('M4 accepts a user-scope Claude Code entry', async () => {
+  const r = await runWith(fixture(files(['p@m'])), [claudeEntry('1.0.0', 'user')]);
+  assert.equal(forHost(r, 'M4', 'claude')[0].status, 'pass');
 });

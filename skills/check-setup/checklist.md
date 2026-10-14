@@ -21,7 +21,7 @@ Fix: repair the JSON, and add `"<marketplace>": { "source": { "source": "github"
 
 ### P4: Codex project config declares the marketplace and the plugin
 
-Rationale: Codex reads `.codex/config.toml`. Every plugin enabled there (`[plugins."<plugin>@<marketplace>"]`, `enabled = true`) needs its marketplace declared (`[marketplaces.<name>]` with `source_type` and `source`); Codex's built-in marketplaces (`openai-bundled`, `openai-curated`, `openai-primary-runtime`) are exempt for the same reason. If Claude settings enable plugins but `.codex/config.toml` is missing, that is a fail. Malformed TOML is a fail, not a crash. Skip when neither Host declares plugins.
+Rationale: Codex reads `.codex/config.toml`. Every plugin enabled there (`[plugins."<plugin>@<marketplace>"]`, `enabled = true`) needs its marketplace declared (`[marketplaces.<name>]` with `source_type` and `source`); Codex's built-in marketplaces (`openai-bundled`, `openai-curated`, `openai-curated-remote`, `openai-primary-runtime`; source: `codex plugin marketplace list --json` and `codex plugin list --json`, codex-cli 0.162.1, 2026-10-14) are exempt for the same reason. If Claude settings enable plugins but `.codex/config.toml` is missing, that is a fail. Malformed TOML is a fail, not a crash. Skip when neither Host declares plugins.
 Fix: add the two tables, for example `[marketplaces.m]` with `source_type = "git"` and `source = "https://github.com/<owner>/<repo>.git"`, plus `[plugins."a@m"]` with `enabled = true`.
 
 ### P5: Shared plugin sets match across Hosts

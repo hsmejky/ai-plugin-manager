@@ -23,7 +23,7 @@ async function l1Claude(pluginFiles, reply) {
   });
   const runCommand = async (cmd, args) => {
     if (cmd !== 'claude') return { ok: false, error: 'command not found' };
-    if (args[0] === '--version') return { ok: true, stdout: '2.1.296' };
+    if (args[0] === '--version') return { ok: true, stdout: '2.1.299' };
     if (args[0] === 'plugin' && args[1] === 'list') {
       return { ok: true, stdout: JSON.stringify([{ id: PLUGIN, version: '1.0.0', installPath: pluginDir }]) };
     }

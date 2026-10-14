@@ -223,3 +223,109 @@ test('P3 still passes a legitimate name (#54)', async () => {
   const [p3] = find(await run(claude({ extraKnownMarketplaces: { 'acme-tools': ghMkt('acme/tools') } })), 'P3');
   assert.equal(p3.status, 'pass');
 });
+
+// #56: the remaining offline-decidable classes of the "Reserved names" section, whatever the source
+const failsFor = async (name, source = ghMkt('o/m')) =>
+  find(await run(claude({ extraKnownMarketplaces: { [name]: source } })), 'P3')[0];
+
+test('P3 fails the names Claude Code uses for plugins without a marketplace, even from github.com/anthropics/ (#56)', async () => {
+  for (const name of ['inline', 'builtin', 'skills-dir', 'synced', 'claude-plugin-test']) {
+    for (const source of [ghMkt('o/m'), ghMkt('anthropics/x')]) {
+      const p3 = await failsFor(name, source);
+      assert.equal(p3.status, 'fail', name);
+      assert.match(p3.message, new RegExp(`"${name}"`));
+      assert.match(p3.message, /without a marketplace/);
+      assert.match(p3.fix, /[Rr]ename/);
+    }
+  }
+});
+
+test('P3 fails npm, pip, uv, cargo, github and gh in any casing (#56)', async () => {
+  for (const name of ['npm', 'pip', 'uv', 'cargo', 'github', 'gh', 'NPM', 'Pip', 'GitHub', 'GH', 'Cargo']) {
+    const p3 = await failsFor(name, ghMkt('anthropics/x'));
+    assert.equal(p3.status, 'fail', name);
+    assert.match(p3.message, new RegExp(`"${name}"`));
+    assert.match(p3.message, /package manager or code host/);
+  }
+});
+
+test('P3 fails the member names every JavaScript object has (#56)', async () => {
+  for (const name of ['constructor', 'hasOwnProperty', 'isPrototypeOf', 'propertyIsEnumerable', 'toLocaleString', 'toString', 'valueOf']) {
+    const p3 = await failsFor(name);
+    assert.equal(p3.status, 'fail', name);
+    assert.match(p3.message, new RegExp(`"${name}"`));
+    assert.match(p3.message, /JavaScript object member/);
+  }
+});
+
+test('P3 does not fail names that only resemble the exact-name classes (#56)', async () => {
+  for (const name of ['inline-tools', 'npm-tools', 'github-tools', 'Constructor', 'tostring', 'claudeai', 'my-claudeai-x']) {
+    assert.equal((await failsFor(name)).status, 'pass', name);
+  }
+});
+
+test('P3 fails a name starting with claudeai- (#56)', async () => {
+  for (const name of ['claudeai-tools', 'claudeai-']) {
+    const p3 = await failsFor(name, ghMkt('anthropics/x'));
+    assert.equal(p3.status, 'fail', name);
+    assert.match(p3.message, /claudeai-/);
+    assert.match(p3.message, /hosted on claude\.ai/);
+  }
+});
+
+test('P3 fails a name with a control or bidirectional-formatting character (#56)', async () => {
+  for (const name of ['a\nb', 'a\u001bb', 'a\u0000b', 'a\u007fb', 'a‮b', 'a⁦b', 'a‏b']) {
+    const p3 = await failsFor(name);
+    assert.equal(p3.status, 'fail', JSON.stringify(name));
+    assert.match(p3.message, /control or bidirectional-formatting/);
+  }
+});
+
+test('P3 fails another spelling of a name from the always-reserved classes (#56)', async () => {
+  for (const [name, reserved] of [['skills.dir', 'skills-dir'], ['inline.', 'inline'], ['GH.', 'GH']]) {
+    const p3 = await failsFor(name);
+    assert.equal(p3.status, 'fail', name);
+    assert.match(p3.message, new RegExp(`another spelling of the reserved name "${reserved}"`));
+  }
+});
+
+test('P3 reports every bad name in one result, whatever its class (#56)', async () => {
+  const p3 = (
+    await run(
+      claude({
+        extraKnownMarketplaces: {
+          'claude-plugins-official': ghMkt('evil/x'),
+          'claude.code.plugins': ghMkt('o/m'),
+          'café': ghMkt('o/m'),
+          inline: ghMkt('o/m'),
+          toString: ghMkt('o/m'),
+          'claudeai-x': ghMkt('o/m'),
+          'a\nb': ghMkt('o/m'),
+          NPM: ghMkt('o/m'),
+          'acme-tools': ghMkt('acme/tools'),
+        },
+      }),
+    )
+  ).find((f) => f.id === 'P3');
+  assert.equal(p3.status, 'fail');
+  for (const re of [/claude-plugins-official/, /untrusted source/, /another spelling/, /non-ASCII/, /without a marketplace/, /JavaScript object member/, /claudeai-x/, /control or bidirectional/, /package manager or code host/]) {
+    assert.match(p3.message, re);
+  }
+  assert.doesNotMatch(p3.message, /acme-tools/);
+  assert.equal(p3.fix.match(/"enabledPlugins"/g).length, 1, 'one shared rename fix');
+  assert.match(p3.fix, /github\.com\/anthropics\//);
+});
+
+test('P7 skips every marketplace that P3 fails (#56)', async () => {
+  for (const name of ['inline', 'NPM', 'toString', 'claudeai-x', 'claude.code.plugins', 'café', 'anthropic-plugin-directory']) {
+    const [p7] = find(await run(claude({ extraKnownMarketplaces: { [name]: ghMkt('o/m') } })), 'P7');
+    assert.equal(p7.status, 'skip', name);
+  }
+  const [p7] = find(
+    await run(claude({ extraKnownMarketplaces: { inline: ghMkt('o/m'), 'acme-tools': ghMkt('acme/tools') } })),
+    'P7',
+  );
+  assert.equal(p7.status, 'warn');
+  assert.match(p7.message, /acme-tools/);
+  assert.doesNotMatch(p7.message, /inline/);
+});

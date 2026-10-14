@@ -155,27 +155,33 @@ async function runSteps(env, steps) {
   return done;
 }
 
+/** Version of each plugin before and after the steps: versions = [{ id, before, after, changed }], changes = the changed ones. */
+function versionReport(before, after, ids) {
+  const at = (r, id) => (r.ok ? r.plugins : []).find((p) => p.id === id)?.version ?? null;
+  const versions = (ids ?? (after.ok ? after.plugins.map((p) => p.id) : [])).map((id) => {
+    const [b, a] = [at(before, id), at(after, id)];
+    return { id, before: b, after: a, changed: b !== a };
+  });
+  return { versions, changes: versions.filter((v) => v.changed).map(({ id, before: b, after: a }) => ({ id, before: b, after: a })) };
+}
+
 async function applyClaude(env, plan) {
   const file = join(env.projectDir, CLAUDE_SETTINGS);
   const snapshot = existsSync(file) ? readFileSync(file) : null;
+  const before = await listInstalledPlugins('claude', env);
   const steps = await runSteps(env, plan.steps);
   if (snapshot && Buffer.compare(readFileSync(file), snapshot) !== 0) env.writeFile(file, snapshot);
-  return { status: steps.some((s) => s.status === 'failed') ? 'failed' : 'done', steps };
+  const ids = plan.steps.filter((s) => ['install', 'update'].includes(s.args[1])).map((s) => s.args[2]);
+  const after = await listInstalledPlugins('claude', env);
+  return { status: steps.some((s) => s.status === 'failed') ? 'failed' : 'done', steps, ...versionReport(before, after, ids) };
 }
 
 async function applyCodex(env, plan) {
   const before = await listInstalledPlugins('codex', env);
   const steps = await runSteps(env, plan.steps);
   const after = await listInstalledPlugins('codex', env);
-  const changes = [];
-  if (after.ok) {
-    // Before the first upgrade Codex's list can fail (declared marketplaces not cloned yet): nothing was installed.
-    for (const p of after.plugins) {
-      const old = (before.ok ? before.plugins : []).find((b) => b.id === p.id)?.version ?? null;
-      if (old !== p.version) changes.push({ id: p.id, before: old, after: p.version });
-    }
-  }
-  return { status: steps.some((s) => s.status === 'failed') ? 'failed' : 'done', steps, changes };
+  // Before the first upgrade Codex's list can fail (declared marketplaces not cloned yet): nothing was installed.
+  return { status: steps.some((s) => s.status === 'failed') ? 'failed' : 'done', steps, ...versionReport(before, after) };
 }
 
 export async function applySetup(env, plan) {

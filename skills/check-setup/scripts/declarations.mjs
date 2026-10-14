@@ -1,5 +1,6 @@
 // Reads the target project's own plugin declarations (nothing hard-coded).
-// Reusable by later checks: loadDeclarations(projectDir) -> { claude, codex }.
+// Reusable by later checks: loadDeclarations(projectDir) -> { claude, codex };
+// parseDeclarations({ claudeText, codexText }) does the same for text that is not on disk (null = missing).
 //
 // Each Host entry: { state: 'missing' | 'invalid' | 'ok', file, error?, plugins, marketplaces }
 //   plugins:      Set of 'plugin@marketplace' ids enabled by the project
@@ -14,15 +15,19 @@ export const CLAUDE_SETTINGS = '.claude/settings.json';
 export const CODEX_CONFIG = '.codex/config.toml';
 
 
-function read(projectDir, rel, parse, build) {
-  const file = join(projectDir, rel);
+function read(text, rel, parse, build) {
   const base = { file: rel, plugins: new Set(), marketplaces: new Map() };
-  if (!existsSync(file)) return { ...base, state: 'missing' };
+  if (text === null || text === undefined) return { ...base, state: 'missing' };
   try {
-    return { ...base, ...build(parse(readFileSync(file, 'utf8'))), state: 'ok' };
+    return { ...base, ...build(parse(text)), state: 'ok' };
   } catch (e) {
     return { ...base, state: 'invalid', error: e.message };
   }
+}
+
+function readFile(projectDir, rel) {
+  const file = join(projectDir, rel);
+  return existsSync(file) ? readFileSync(file, 'utf8') : null;
 }
 
 const obj = (v) => (v && typeof v === 'object' ? v : {});
@@ -49,11 +54,16 @@ function buildCodex(toml) {
   return { plugins, marketplaces };
 }
 
-export function loadDeclarations(projectDir) {
+/** Declarations from file text (null = file missing): the same result as loadDeclarations, without touching disk. */
+export function parseDeclarations({ claudeText = null, codexText = null } = {}) {
   return {
-    claude: read(projectDir, CLAUDE_SETTINGS, JSON.parse, buildClaude),
-    codex: read(projectDir, CODEX_CONFIG, parseToml, buildCodex),
+    claude: read(claudeText, CLAUDE_SETTINGS, JSON.parse, buildClaude),
+    codex: read(codexText, CODEX_CONFIG, parseToml, buildCodex),
   };
+}
+
+export function loadDeclarations(projectDir) {
+  return parseDeclarations({ claudeText: readFile(projectDir, CLAUDE_SETTINGS), codexText: readFile(projectDir, CODEX_CONFIG) });
 }
 
 function urlKey(url) {

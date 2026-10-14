@@ -12,16 +12,16 @@ Keeps Claude Code and Codex coordinated at the project level: shared instruction
 
 ## Setting up a machine
 
-Follow the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps).
+Run the setup skill (`/ai-plugin-manager:setup` in Claude Code, `$ai-plugin-manager:setup` in Codex). It shows a plan, waits for your confirmation, then registers the declared marketplaces and installs the enabled plugins in both Hosts. Trust stays manual. The [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) remain the fallback.
 
 ## Adopting the plugin in a project
 
-The plugin provides the `check-setup` skill, which verifies a project's Project setup and the current machine's Machine setup for both Hosts. It needs Node.js. Copy-paste steps:
+The plugin provides the `setup` skill (installs the declared plugins; user-invoked only) and the `check-setup` skill, which verifies a project's Project setup and the current machine's Machine setup for both Hosts. It needs Node.js. Copy-paste steps:
 
 1. Declare the plugin in the project (committed), as this repository does:
    - Claude Code, in `.claude/settings.json`: `"enabledPlugins": { "ai-plugin-manager@ai-plugin-manager": true }` and `"extraKnownMarketplaces": { "ai-plugin-manager": { "source": { "source": "github", "repo": "hsmejky/ai-plugin-manager" }, "autoUpdate": true } }`.
    - Codex, in `.codex/config.toml`: `[marketplaces.ai-plugin-manager]` (`source_type = "git"`, `source = "https://github.com/hsmejky/ai-plugin-manager.git"`) and `[plugins."ai-plugin-manager@ai-plugin-manager"]` with `enabled = true`.
-2. On each machine, complete the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) in each Host (trust the project, install the plugin).
+2. On each machine, trust the project in each Host, then run the setup skill (`/ai-plugin-manager:setup` or `$ai-plugin-manager:setup`); or complete the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) by hand.
 3. Run the setup checker (the live check is opt-in): see [running the checker](docs/agents/verification.md#run-the-setup-checker).
 4. Read the report, apply the fixes and rerun until no fail remains. See [reading the report](docs/agents/verification.md#read-the-report).
 
@@ -39,7 +39,9 @@ The plugin provides the `check-setup` skill, which verifies a project's Project 
 
 - Markdown links: `node --test test/markdown-links.test.mjs` fails when a relative link or anchor in a tracked `.md` file points to a missing file or heading. External URLs are not checked.
 - check-setup skill: `node --test skills/check-setup/scripts/test/*.test.mjs` (see that directory for the suites).
+- setup skill: `node --test skills/setup/scripts/test/*.test.mjs` (offline fake Hosts). Live (opt-in, network, no login, temporary Host homes and project copy only): `SETUP_LIVE=1 node --test skills/setup/scripts/test/live-setup.test.mjs`.
 - Real Host CLIs (opt-in): `CHECK_SETUP_HOST_CLI=1 node --test skills/check-setup/scripts/test/host-cli.test.mjs` compares the test stubs and the documented command names with the installed `claude` and `codex` (skipped per Host when its CLI is absent; without the variable only the offline helper tests run).
 - Live Hosts (opt-in): `CHECK_SETUP_LIVE_INSTRUCTIONS=1 node --test skills/check-setup/scripts/test/live-instructions.test.mjs` asks the logged-in Hosts the instructions prompt and the negative-check skills prompt (model calls; temporary Host homes, deleted afterwards, that get only the access tokens, never a refresh token, so the real logins stay untouched).
 - Codex drift (opt-in): `CHECK_SETUP_CODEX_DRIFT=1 node --test skills/check-setup/scripts/test/codex-drift.test.mjs` checks that a Codex session moves a marketplace installed at an old revision to the configured ref, for a user-level and a project-only declaration (network, no login; temporary `CODEX_HOME` only).
-- CI: `.github/workflows/offline-tests.yml` runs all three suites (Markdown links, doc sync, check-setup skill) on every push to `main` and every pull request, on Node 20 and 24, on Linux and Windows. The live check is not run in CI (it needs Host authentication).
+- Doc sync: `node --test test/doc-sync.test.mjs` keeps facts that several docs repeat in step.
+- CI: `.github/workflows/offline-tests.yml` runs the offline suites (Markdown links, doc sync, check-setup skill, setup skill) on every push to `main` and every pull request, on Node 20 and 24, on Linux and Windows. The live check is not run in CI (it needs Host authentication).

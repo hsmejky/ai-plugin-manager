@@ -35,7 +35,9 @@ test('the sharing doc prerequisites name the tested versions of hosts.mjs', () =
 test('the Node.js minimum in SKILL.md and verification.md matches package.json engines', () => {
   const min = /"node":\s*">=(\d+)"/.exec(read(`${scripts}/package.json`))?.[1];
   assert.ok(min, 'engines.node not found');
-  assert.match(read('skills/check-setup/SKILL.md'), new RegExp(`Node\\.js >= ${min}\\b`));
+  for (const skill of ['check-setup', 'setup']) {
+    assert.match(read(`skills/${skill}/SKILL.md`), new RegExp(`Node\\.js >= ${min}\\b`), skill);
+  }
   assert.match(read('docs/agents/verification.md'), new RegExp(`Node\\.js ${min} or later`));
 });
 
@@ -90,4 +92,19 @@ test('verification.md lists manual checks with the Host versions they were last 
   assert.ok(section, 'section "Manual checks of Host behaviour" missing');
   assert.match(section, /Claude Code \d+\.\d+\.\d+/);
   assert.match(section, /codex-cli \d+\.\d+\.\d+/);
+});
+
+test('the README Tests section lists every suite the offline workflow runs', () => {
+  const readme = read('README.md');
+  const steps = [...read('.github/workflows/offline-tests.yml').matchAll(/run: node --test (\S+)/g)].map((m) => m[1]);
+  assert.ok(steps.length >= 4);
+  for (const s of steps) assert.ok(readme.includes(s), `README lacks ${s}`);
+  assert.ok(!/all three suites/.test(readme), 'README CI line counts the suites wrongly');
+  assert.match(readme, /CI:[^\n]*setup skill/);
+});
+
+test('plugin-authoring names setup as the user-only example', () => {
+  const doc = read('docs/agents/plugin-authoring.md');
+  const section = /### User-only skills[\s\S]*?(?=\n### )/.exec(doc)?.[0] ?? '';
+  assert.match(section, /`setup`/);
 });

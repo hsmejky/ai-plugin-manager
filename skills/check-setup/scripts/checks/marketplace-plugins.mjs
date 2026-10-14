@@ -5,6 +5,8 @@ import { HOST, HOSTS, compareVersions, skipUnlessRunnable } from '../hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
 
 const RELEASE = /^\d+\.\d+\.\d+$/;
+// Versions a Host prints when the plugin has none: Claude Code `unknown`, Codex `local`.
+const PLACEHOLDER_VERSIONS = new Set(['unknown', 'local']);
 const NO_MANIFEST = /marketplace root does not contain a supported manifest/i;
 
 /** Fix for a failed list command: specific when Codex reports a marketplace without a manifest. */
@@ -100,7 +102,7 @@ async function checkM5(decls, hostInfos, env) {
     compared++;
     const c = inClaude.version;
     const x = inCodex.version;
-    if (c != null && c === x) continue; // identical strings: nothing to compare
+    if (c != null && c === x && !PLACEHOLDER_VERSIONS.has(c)) continue; // identical real strings: nothing to compare
     if (RELEASE.test(c ?? '') && RELEASE.test(x ?? '')) drift.push({ id, claude: c, codex: x });
     else unknown.push({ id, claude: c, codex: x });
   }

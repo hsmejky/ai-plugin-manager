@@ -284,6 +284,15 @@ test('M5 passes when both Hosts report the same non-release version string (#47)
   assert.equal((await m5With('0.1.12-5f7cd798dc99', '0.1.12-5f7cd798dc99')).status, 'pass');
 });
 
+test('M5 cannot compare identical placeholder versions (unknown, local): no version was reported (#47)', async () => {
+  for (const placeholder of ['unknown', 'local']) {
+    const f = await m5With(placeholder, placeholder);
+    assert.equal(f.status, 'warn');
+    assert.match(f.message, /cannot compare/i);
+    assert.match(f.message, /a@m/);
+  }
+});
+
 test('M5 reports real drift and uncomparable plugins together (#47)', async () => {
   const f = {
     ...claudeFiles(['a@m', 'b@m'], { m: 'o/m' }),

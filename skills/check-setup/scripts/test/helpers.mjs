@@ -20,6 +20,7 @@ export function envFor(projectDir, overrides = {}) {
     homeDir: fixture(),
     platform: 'linux',
     runCommand: async () => ({ ok: false, error: 'command not found' }),
+    fetchJson: async () => ({ ok: false, error: 'offline' }),
     live: false,
     ...overrides,
   };

@@ -23,6 +23,8 @@ Run from the project directory:
 node "${CLAUDE_SKILL_DIR}/scripts/setup.mjs" plan
 ```
 
+In Codex, request escalation for this command too, although it only reads: it starts the Claude Code and Codex CLIs, and the Codex sandbox on Windows blocks every child process of a sandboxed command (`spawn EPERM`, no JSON). If escalation is not possible, report that `plan` cannot run in this sandbox and stop.
+
 `${CLAUDE_SKILL_DIR}` is a substitution Claude Code performs in skill content, not an environment variable. If the literal text `${CLAUDE_SKILL_DIR}` remains (Codex), use the path of this skill directory instead.
 To declare a Shared plugin in both Hosts first, add `--add <plugin>@<marketplace>` and, for a marketplace
 neither Host declares yet, `--source <owner/repo | git URL>`. Pass the same flags to `apply`. A request that would

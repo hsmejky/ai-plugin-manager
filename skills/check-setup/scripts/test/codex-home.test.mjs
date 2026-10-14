@@ -3,12 +3,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { runChecks } from '../check-setup.mjs';
+import { HOST } from '../hosts.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
 const POSIX = '/home/jan/repo';
 const PLUGIN = 'tools@m';
 const installed = async (cmd) =>
-  cmd === 'claude' ? { ok: true, stdout: '2.1.296 (Claude Code)' } : { ok: true, stdout: 'codex-cli 0.162.1' };
+  cmd === 'claude' ? { ok: true, stdout: `${HOST.claude.testedVersion} (Claude Code)` } : { ok: true, stdout: `codex-cli ${HOST.codex.testedVersion}` };
 
 // A trap in ~/.codex (homeDir) and the real state in $CODEX_HOME (codexHome).
 const homes = (trap, real) => {

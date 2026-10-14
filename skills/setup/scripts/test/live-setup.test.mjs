@@ -10,11 +10,25 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fixture, isolatedEnv, optIn, removeIsolated, runCli, REPO_ROOT } from '../../../check-setup/scripts/test/helpers.mjs';
 
+const REF = (process.env.SETUP_LIVE_REF ?? '').trim();
 const live = optIn('SETUP_LIVE', 'to run the setup skill against the installed Hosts (network, temporary homes only)');
 const SETUP = join(REPO_ROOT, 'skills', 'setup', 'scripts', 'setup.mjs');
 const CHECK = join(REPO_ROOT, 'skills', 'check-setup', 'scripts', 'check-setup.mjs');
 const sha = (file) => (existsSync(file) ? createHash('sha256').update(readFileSync(file)).digest('hex') : null);
 const REAL = [join(homedir(), '.claude.json'), join(homedir(), '.claude', 'settings.json'), join(homedir(), '.codex', 'config.toml')];
+
+// Pin the copied (not the committed) Project setup's own marketplace to `ref` in both Hosts' files.
+function pinMarketplace(project, ref) {
+  const claude = join(project, '.claude', 'settings.json');
+  const settings = JSON.parse(readFileSync(claude, 'utf8'));
+  settings.extraKnownMarketplaces['ai-plugin-manager'].source.ref = ref;
+  writeFileSync(claude, `${JSON.stringify(settings, null, 2)}\n`);
+  const codex = join(project, '.codex', 'config.toml');
+  const toml = readFileSync(codex, 'utf8');
+  const pinned = toml.replace(/(\[marketplaces\.ai-plugin-manager\]\r?\n(?:(?!\[).*\r?\n)*?source = "[^"]*"\r?\n)/, `$1ref = "${ref}"\n`);
+  assert.notEqual(pinned, toml, 'could not pin the Codex marketplace');
+  writeFileSync(codex, pinned);
+}
 
 test('setup plan, apply and a second plan against the installed Hosts', { skip: live.skip, timeout: 600000 }, async (t) => {
   const realBefore = REAL.map(sha);
@@ -29,6 +43,7 @@ test('setup plan, apply and a second plan against the installed Hosts', { skip: 
     mkdirSync(join(project, rel, '..'), { recursive: true });
     cpSync(join(REPO_ROOT, rel), join(project, rel));
   }
+  if (REF) pinMarketplace(project, REF);
   const key = project.replace(/\\/g, '/');
   writeFileSync(join(env.HOME, '.claude.json'), JSON.stringify({ projects: { [key]: { hasTrustDialogAccepted: true } } }));
   const codexKey = process.platform === 'win32' ? project.replace(/\//g, '\\').toLowerCase() : project;
@@ -55,13 +70,21 @@ test('setup plan, apply and a second plan against the installed Hosts', { skip: 
   const lines = Object.values(again.hosts).flatMap((h) => h.steps.map((s) => s.args.join(' ')));
   assert.deepEqual(lines.filter((l) => /marketplace add|plugin install/.test(l)), []);
 
-  // Each Host's install of this plugin contains check-setup's script.
+  // Each Host's install of this plugin contains check-setup's script, the setup skill next to it, and the installed setup.mjs runs
+  // (a broken ../../check-setup/ import fails here).
   const claudeList = JSON.parse((await runCli('claude', ['plugin', 'list', '--json'], { env, cwd: project })).stdout);
   const claudeDir = claudeList.find((p) => p.id === 'ai-plugin-manager@ai-plugin-manager')?.installPath;
   assert.ok(claudeDir && existsSync(join(claudeDir, 'skills', 'check-setup', 'scripts', 'check-setup.mjs')), 'Claude Code install');
   const cache = join(env.CODEX_HOME, 'plugins', 'cache', 'ai-plugin-manager', 'ai-plugin-manager');
   const version = readdirSync(cache)[0];
   assert.ok(existsSync(join(cache, version, 'skills', 'check-setup', 'scripts', 'check-setup.mjs')), 'Codex install');
+  for (const [name, dir] of [['Claude Code', claudeDir], ['Codex', join(cache, version)]]) {
+    const installed = join(dir, 'skills', 'setup', 'scripts', 'setup.mjs');
+    assert.ok(existsSync(installed), `${name} install lacks skills/setup/scripts/setup.mjs`);
+    const ran = await node([installed, 'plan', '--project', project]);
+    assert.ok(ran.ok, `${name}: installed setup.mjs plan failed: ${ran.error}`);
+    assert.ok(JSON.parse(ran.stdout).hosts, `${name}: installed setup.mjs plan printed no hosts`);
+  }
   // Settles whether the named `codex plugin marketplace upgrade` installs: the Codex plugins were not installed before apply.
   assert.ok(report.hosts.codex.changes.some((c) => c.id === 'ai-plugin-manager@ai-plugin-manager' && c.before === null));
 

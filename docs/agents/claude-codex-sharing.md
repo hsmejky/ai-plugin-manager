@@ -65,7 +65,9 @@ Sources: [Claude Code: keep plugins updated](https://code.claude.com/docs/en/dis
 
 ## Verification
 
-Run each prompt non-interactively in each host from the repository root.
+The `check-setup` skill automates the Project setup and Machine setup checks; its [checklist](../../skills/check-setup/checklist.md) is the single list of checks, rationale and fixes. Its live check (L1) reuses the skills prompt below.
+
+To verify by hand, run each prompt non-interactively in each host from the repository root.
 
 Skills:
 

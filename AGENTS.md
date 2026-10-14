@@ -23,6 +23,10 @@ Single-context: one `GLOSSARY.md` plus `docs/adr/` at the repo root. See `docs/a
 Claude Code and Codex share these instructions and the `mattpocock-skills` plugin.
 Before changing agent instructions, skills, or plugin setup, read `docs/agents/claude-codex-sharing.md`.
 
+## Plugin versioning
+
+Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Codex follows the marketplace HEAD and has no manifest here; bump any Codex manifest added later in the same commit.
+
 ## Token economy
 
 - Follow-up work goes to a new agent rather than resuming the previous agent's history:

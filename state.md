@@ -1,6 +1,6 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (fifth: research results of #25 and #26 reviewed and their follow-ups filed as #30-#33; no new Host release since the fourth session, so objectives 1-4 carry over).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (sixth: #31 decided by the user, opt-in `ref` pinning with release tags, now ready-for-agent; follow-up #34 filed; no new Host release checked since the fourth session, so objectives 1-4 carry over).
 
 ## Hosts
 
@@ -23,4 +23,4 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## What next
 
-19, 20, 23, 21, 22, 24, 27, 29, 28, 30, 32, 31, 33, 25, 26
+19, 20, 23, 21, 22, 24, 27, 29, 28, 30, 32, 31, 34, 33

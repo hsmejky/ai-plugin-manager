@@ -1,6 +1,6 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (second).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (third: #27 decided and briefed; no new Host release, installed Hosts still 2.1.299 and 0.162.1, so objectives 1-4 carry over from the second session).
 
 ## Hosts
 
@@ -23,4 +23,4 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## What next
 
-19, 20, 23, 21, 22, 24, 29, 27, 25, 28, 26
+19, 20, 23, 21, 22, 24, 27, 29, 25, 28, 26

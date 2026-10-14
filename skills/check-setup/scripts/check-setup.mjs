@@ -42,7 +42,7 @@ export function defaultRunCommand(cmd, args, opts = {}) {
       (err, stdout, stderr) => {
         if (!err) return done({ ok: true, stdout, stderr: String(stderr ?? '') });
         const detail = (stderr || stdout || '').toString().trim().split(/\r?\n/).slice(-3).join(' ').slice(0, 300);
-        done({ ok: false, error: detail && !err.message.includes(detail) ? `${err.message} | ${detail}` : err.message, stderr: String(stderr ?? '') });
+        done({ ok: false, error: detail && !err.message.includes(detail) ? `${err.message} | ${detail}` : err.message, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') });
       },
     );
     child.stdin?.end();
@@ -60,7 +60,7 @@ export async function defaultFetchJson(url, opts = {}) {
   }
 }
 
-function gitTopLevel(dir) {
+export function gitTopLevel(dir) {
   return new Promise((done) => {
     execFile('git', ['rev-parse', '--show-toplevel'], { cwd: dir }, (err, stdout) =>
       done(err ? dir : stdout.trim()),

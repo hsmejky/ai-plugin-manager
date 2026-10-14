@@ -35,7 +35,9 @@ test('the sharing doc prerequisites name the tested versions of hosts.mjs', () =
 test('the Node.js minimum in SKILL.md and verification.md matches package.json engines', () => {
   const min = /"node":\s*">=(\d+)"/.exec(read(`${scripts}/package.json`))?.[1];
   assert.ok(min, 'engines.node not found');
-  assert.match(read('skills/check-setup/SKILL.md'), new RegExp(`Node\\.js >= ${min}\\b`));
+  for (const skill of ['check-setup', 'setup']) {
+    assert.match(read(`skills/${skill}/SKILL.md`), new RegExp(`Node\\.js >= ${min}\\b`), skill);
+  }
   assert.match(read('docs/agents/verification.md'), new RegExp(`Node\\.js ${min} or later`));
 });
 

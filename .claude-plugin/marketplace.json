@@ -8,7 +8,7 @@
     {
       "name": "ai-plugin-manager",
       "source": "./",
-      "description": "check-setup: verifies the shared Claude Code and Codex agent setup of a project.",
+      "description": "check-setup verifies and setup sets up (installs and updates) the shared Claude Code and Codex agent setup of a project.",
       "category": "productivity"
     }
   ]

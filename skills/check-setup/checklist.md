@@ -40,11 +40,11 @@ Rationale: Claude Code does not auto-update third-party marketplaces unless the 
 Result: warn when an `extraKnownMarketplaces` entry in `.claude/settings.json` has no `"autoUpdate": true` (key missing or `false`); pass otherwise. Skip when the file is missing or unreadable (P3 reports that) or declares no marketplace that needs it.
 Fix: add `"autoUpdate": true` next to `"source"` in the named `extraKnownMarketplaces` entry.
 
-### P8: Codex marketplace `ref` is not an abbreviated commit SHA
+### P8: Codex marketplace `ref` follows Codex's full-SHA rule
 
 Checked for every `[marketplaces.<name>]` in `.codex/config.toml` that sets `ref`. Source: `docs/research/codex-marketplace-ref-pinning-2026-10-14.md` (#26), verified on codex-cli 0.162.1.
-Rationale: Codex skips `git ls-remote` only for a full 40-hex SHA (`marketplace_upgrade/git.rs`, `is_full_git_sha`). `codex plugin marketplace add <repo>@a157af3` succeeds, but every later upgrade, including the startup auto-upgrade, fails with "git ls-remote returned empty output for marketplace source" and the plugin silently stops updating.
-Result: warn when a `ref` is 4 to 39 hex characters; pass for no `ref`, a full SHA, or a tag or branch name; skip when `.codex/config.toml` is missing or unreadable (P4 reports that) or declares no marketplace.
+Rationale: Codex treats a ref as a commit only when `is_full_git_sha` holds: exactly 40 ASCII hex characters, untrimmed (`marketplace_upgrade/git.rs`, tag `rust-v0.162.1`); any other ref goes to `git ls-remote` as a branch or tag name. `codex plugin marketplace add <repo>@a157af3` succeeds, but every later upgrade, including the startup auto-upgrade, fails with "git ls-remote returned empty output for marketplace source" and the plugin silently stops updating.
+Result: warn when a `ref` is all hex but not 40 characters (4 to 39: Codex does not treat it as a short SHA, so it fails unless a branch or tag of that name exists, and the message says so rather than calling it a short SHA; 41 to 64 including a SHA-256 id: not a commit, always looked up as a name) or has surrounding whitespace (Codex does not trim); pass for no `ref`, a full 40-hex SHA, or a tag or branch name; skip when `.codex/config.toml` is missing or unreadable (P4 reports that) or declares no marketplace.
 Fix: set `ref` to the full 40-character SHA, or to a tag or branch name.
 
 ## Machine setup

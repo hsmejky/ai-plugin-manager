@@ -118,7 +118,7 @@ Claude Code updates when the `version` string changes; Codex updates when the ma
 
 ## Test an unreleased change locally
 
-Run the repository tests first: `node --test test/markdown-links.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root. On Claude Code 2.1.299 a good result ends with `Validation passed with warnings`: the warning `CLAUDE.md at the plugin root is not loaded as project context` is inherent to this layout (ADR 0001) and the Project setup needs that `CLAUDE.md`, so do not remove it. The advice to add a one-step install line (`/plugin install ai-plugin-manager --marketplace hsmejky/ai-plugin-manager`) is optional; errors are what to fix.
+Run the repository tests first: `node --test test/markdown-links.test.mjs test/doc-sync.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root. On Claude Code 2.1.299 a good result ends with `Validation passed with warnings`: the warning `CLAUDE.md at the plugin root is not loaded as project context` is inherent to this layout (ADR 0001) and the Project setup needs that `CLAUDE.md`, so do not remove it. The advice to add a one-step install line (`/plugin install ai-plugin-manager --marketplace hsmejky/ai-plugin-manager`) is optional; errors are what to fix.
 
 ### Claude Code
 

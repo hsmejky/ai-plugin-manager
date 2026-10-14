@@ -42,7 +42,7 @@ How each Host invokes a plugin skill and picks up updates is in the [authoring d
 
 ## Per-machine steps
 
-The Machine setup, once per machine and Host.
+The Machine setup, once per machine and Host. Run the `setup` skill first (`/ai-plugin-manager:setup` in Claude Code, `$ai-plugin-manager:setup` in Codex): it prints a plan, applies it after you confirm, restores `.claude/settings.json` byte for byte and ends with check-setup's checks. It stops for a Host whose project is not trusted, so trust (steps 2.1 and 3.1) stays manual. The steps below are the fallback and the reference for what the skill does.
 
 1. **Prerequisites:** both CLIs installed, at versions no older than those tested: Claude Code 2.1.299 and codex-cli 0.162.1.
 2. **Claude Code:**

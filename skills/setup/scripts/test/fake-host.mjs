@@ -128,6 +128,8 @@ export function machine(opts = {}) {
     if (args[0] !== 'plugin') return { ok: false, error: 'unexpected' };
     if (args[1] === 'marketplace' && args[2] === 'list') return json(codexMarkets(...state.codex.marketplaces));
     if (args[1] === 'list') {
+      // Real codex-cli 0.162.1: declared Git marketplaces that are not cloned yet make the list fail.
+      if (state.codex.marketplaces.size === 0) return { ok: false, error: 'Error: marketplace root does not contain a supported manifest' };
       return json(codexInstalled(...Object.entries(state.codex.plugins).map(([id, v]) => [id, v, true])));
     }
     if (args[1] === 'marketplace' && args[2] === 'upgrade') {

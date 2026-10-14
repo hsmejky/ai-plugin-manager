@@ -168,9 +168,10 @@ async function applyCodex(env, plan) {
   const steps = await runSteps(env, plan.steps);
   const after = await listInstalledPlugins('codex', env);
   const changes = [];
-  if (before.ok && after.ok) {
+  if (after.ok) {
+    // Before the first upgrade Codex's list can fail (declared marketplaces not cloned yet): nothing was installed.
     for (const p of after.plugins) {
-      const old = before.plugins.find((b) => b.id === p.id)?.version ?? null;
+      const old = (before.ok ? before.plugins : []).find((b) => b.id === p.id)?.version ?? null;
       if (old !== p.version) changes.push({ id: p.id, before: old, after: p.version });
     }
   }

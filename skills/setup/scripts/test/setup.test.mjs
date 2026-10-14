@@ -177,6 +177,13 @@ test('Codex reports version changes from list --json before and after', async ()
   assert.deepEqual([change.before, change.after], ['0.5.1', CATALOG['ai-plugin-manager'].plugins['ai-plugin-manager']]);
 });
 
+test('on a fresh machine Codex lists nothing before the upgrade, so every plugin is reported as new', async () => {
+  const m = machine();
+  const report = await applySetup(m.env, await planSetup(m.env));
+  const ids = report.hosts.codex.changes.map((c) => [c.id, c.before]);
+  assert.deepEqual(ids.sort(), [['ai-plugin-manager@ai-plugin-manager', null], ['mattpocock-skills@mattpocock', null]]);
+});
+
 test('CLI: apply --expect with the plan digest runs; a changed plan exits 2 with the new plan and runs nothing', async () => {
   const m = machine();
   const plan = (await runCli(['plan'], m.env)).json;

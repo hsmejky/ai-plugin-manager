@@ -4,7 +4,7 @@ import { runChecks } from '../check-setup.mjs';
 import { fixture, envFor, find } from './helpers.mjs';
 
 const runCommand = async (cmd) =>
-  cmd === 'claude' ? { ok: true, stdout: '2.1.296 (Claude Code)' } : { ok: true, stdout: 'codex-cli 0.160.1' };
+  cmd === 'claude' ? { ok: true, stdout: '2.1.299 (Claude Code)' } : { ok: true, stdout: 'codex-cli 0.162.1' };
 
 const WIN = 'C:\\Users\\jan\\repo';
 const POSIX = '/home/jan/repo';

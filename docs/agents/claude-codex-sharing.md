@@ -44,7 +44,7 @@ How each Host invokes a plugin skill and picks up updates is in the [authoring d
 
 The Machine setup, once per machine and Host.
 
-1. **Prerequisites:** both CLIs installed, at versions no older than those tested: Claude Code 2.1.296 and codex-cli 0.160.1.
+1. **Prerequisites:** both CLIs installed, at versions no older than those tested: Claude Code 2.1.299 and codex-cli 0.162.1.
 2. **Claude Code:**
    1. Run `claude` interactively in the repository and accept the workspace trust dialog. Project-scope plugins load only after trust is accepted for the repository folder itself; `-p` or trusting a parent folder is not enough.
    2. Stay in that session until `/plugin` → Marketplaces lists the marketplace. Claude registers a marketplace declared only in project settings in the background after an interactive session starts ([plugin loading](https://code.claude.com/docs/en/plugins/loading)).

@@ -21,7 +21,12 @@ Single-context: one `GLOSSARY.md` plus `docs/adr/` at the repo root. See `docs/a
 ### Claude and Codex sharing
 
 Claude Code and Codex share these instructions and the `mattpocock-skills` plugin.
-Before changing agent instructions, skills, or plugin setup, read `docs/agents/claude-codex-sharing.md`.
+Before changing agent instructions or deciding what is shared between the Hosts, read `docs/agents/claude-codex-sharing.md`.
+
+### Plugin authoring
+
+Before changing skills, manifests, or plugin setup, read `docs/agents/plugin-authoring.md`.
+It ends with verifying the setup per `docs/agents/verification.md`.
 
 ## Plugin versioning
 

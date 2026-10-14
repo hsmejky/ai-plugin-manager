@@ -13,7 +13,7 @@ function stub({ claude, codex }) {
   return async (cmd, args) => {
     const h = cmd === 'claude' ? claude : codex;
     if (!h) return MISSING;
-    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296 (Claude Code)' : 'codex-cli 0.160.1' };
+    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.299 (Claude Code)' : 'codex-cli 0.162.1' };
     if (args[1] === 'list') return h.plugins === undefined ? MISSING : json(h.plugins);
     if (args[1] === 'marketplace' && args[2] === 'list') return h.markets === undefined ? MISSING : json(h.markets);
     return MISSING;

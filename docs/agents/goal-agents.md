@@ -79,9 +79,9 @@ Start:
 
 1. Read this file, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`
    and `GLOSSARY.md`.
-2. Check memory: if `CLAUDE_CODE_DISABLE_AUTO_MEMORY` is set or
-   `autoMemoryEnabled` is false in a settings file, report that memory is off
-   and stop.
+2. Check memory: if `CLAUDE_CODE_DISABLE_AUTO_MEMORY` is `1`, or it is not `0`
+   and `autoMemoryEnabled` is false in a settings file, report that memory is
+   off and stop. `0` forces memory on.
 3. Find your State issue. None: create it. More than one: stop and ask. A label
    missing on the tracker: create it only if this file names it.
 4. `## Handoff` present: read it, act on it, delete it.

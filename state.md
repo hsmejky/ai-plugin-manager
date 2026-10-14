@@ -1,12 +1,12 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (third: #27 decided and briefed; no new Host release, installed Hosts still 2.1.299 and 0.162.1, so objectives 1-4 carry over from the second session).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (fourth: #29 triaged after the user's decisions; still needs-info on severity and Homebrew/package-manager channels. No new Host release: npm `latest` 2.1.299 and 0.162.1, installed Hosts the same, so objectives 1-4 carry over from the second session).
 
 ## Hosts
 
-| Host        | Last processed stable release | Installed version at last live verification |
+| Host        | Last processed Latest release (maintainer target per #29: Claude Code `latest` channel, newest Codex release) | Installed version at last live verification |
 | ----------- | ----------------------------- | ------------------------------------------- |
-| Claude Code | 2.1.299, newest in CHANGELOG and npm `latest` (CHANGELOG has no 2.1.297 or 2.1.298 section). Claude Code's own `stable` channel is older: npm dist-tag `stable` = 2.1.287 on 2026-10-14; which one counts is asked in #29 | 2.1.299 (2026-10-14: offline tests 92/92 and links 4/4, `check-setup --live` all pass, manual checks pass) |
+| Claude Code | 2.1.299, newest in CHANGELOG and npm `latest` (CHANGELOG has no 2.1.297 or 2.1.298 section). Claude Code's `stable` channel is older (npm dist-tag `stable` = 2.1.287 on 2026-10-14); per #29 the maintainer targets `latest` | 2.1.299 (2026-10-14: offline tests 92/92 and links 4/4, `check-setup --live` all pass, manual checks pass) |
 | Codex       | 0.162.1 (release notes 0.161.0, 0.162.0, 0.162.1; GitHub latest and npm `latest` on 2026-10-14) | 0.162.1 (2026-10-14: offline tests, `check-setup --live`, manual checks incl. negative check pass; `plugin list --json` and `marketplace list --json` shapes match the test stubs) |
 
 ## Watching
@@ -19,7 +19,7 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 - <https://agent-plugins.org/specification>: the "portable" root `plugin.json` format that OpenAI's docs prefer and Codex looks up first; a move towards it would change this repo's manifest layout.
 - <https://agentskills.io>: cross-Host `SKILL.md` frontmatter standard; governs how invocation flags like `disable-model-invocation` are meant to behave across Hosts.
 - <https://learn.chatgpt.com/docs/config-file/config-reference>: canonical Codex config reference since `developers.openai.com/codex/*` redirects here; marketplace, plugin and project trust keys.
-- <https://code.claude.com/docs/en/setup>: Claude Code release channels (`latest`, `stable`) and `claude doctor`; defines which version counts as current for #29.
+- <https://code.claude.com/docs/en/setup>: Claude Code release channels (`latest`, `stable`) and `claude doctor`; defines the release channels behind "Latest release" (#29), incl. Homebrew casks and package-manager repositories that bypass `autoUpdatesChannel`.
 
 ## What next
 

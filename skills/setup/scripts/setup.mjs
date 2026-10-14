@@ -93,7 +93,8 @@ async function planClaude(env, decl, manual) {
   }
   for (const id of decl.plugins) {
     if (!available.has(marketplaceOf(id))) continue;
-    const verb = plugins.plugins.some((p) => p.id === id) ? 'update' : 'install';
+    // Only an install at project or local scope is updated; a user-scope install does not satisfy the declaration.
+    const verb = plugins.plugins.some((p) => p.id === id && (p.scope === 'project' || p.scope === 'local')) ? 'update' : 'install';
     steps.push(step('claude', ['plugin', verb, id, '--scope', 'project', '--json'], cwd, `${verb} ${id}`, 'M4'));
   }
   if (steps.some((s) => ['install', 'update'].includes(s.args[1]))) {
@@ -116,9 +117,9 @@ export async function planSetup(env, request = {}) {
   const hosts = await detectHosts(env);
   let decls = loadDeclarations(env.projectDir);
   let projectEdits = [];
-  if (request.add || request.pin !== undefined || request.unpin !== undefined) {
+  if (request.add !== undefined || request.pin !== undefined || request.unpin !== undefined) {
     const files = { claude: readIfExists(env.projectDir, CLAUDE_SETTINGS), codex: readIfExists(env.projectDir, CODEX_CONFIG) };
-    const proposal = await (request.add ? proposeAdd : proposePin)(env, files, request);
+    const proposal = await (request.add !== undefined ? proposeAdd : proposePin)(env, files, request);
     if (proposal.refused) return finish({ request, projectEdits: [], hosts: {}, manual: [], notes: [], refused: proposal.refused });
     projectEdits = proposal.edits;
     // Machine steps follow the declarations as they will be after the edits.
@@ -212,7 +213,6 @@ async function applyCodex(env, plan) {
 export async function applySetup(env, plan) {
   if (plan.refused) return { exit: 2, refused: plan.refused, hosts: {}, manual: [], notes: [], findings: [], responsible: [] };
   for (const e of plan.projectEdits) {
-    mkdirSync(dirname(join(env.projectDir, e.file)), { recursive: true });
     env.writeFile(join(env.projectDir, e.file), e.after);
   }
   const hosts = {};
@@ -249,9 +249,9 @@ export async function runCli(argv, env) {
   }
   if (sub !== 'plan' && sub !== 'apply') return { code: 2, json: { error: 'unknown subcommand', usage: USAGE } };
   const request = {};
-  if (flags['--add']) request.add = flags['--add'];
-  if (flags['--source']) {
-    if (!request.add) return { code: 2, json: { error: '--source needs --add', usage: USAGE } };
+  if (flags['--add'] !== undefined) request.add = flags['--add'];
+  if (flags['--source'] !== undefined) {
+    if (request.add === undefined) return { code: 2, json: { error: '--source needs --add', usage: USAGE } };
     request.source = flags['--source'];
   }
   if (flags['--pin'] !== undefined) request.pin = flags['--pin'];
@@ -287,7 +287,10 @@ export async function main(argv) {
     platform: process.platform,
     runCommand: defaultRunCommand,
     fetchJson: defaultFetchJson,
-    writeFile: (file, data) => writeFileSync(file, data),
+    writeFile: (file, data) => {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, data);
+    },
   };
   const { code, json } = await runCli(args, env);
   process.stdout.write(JSON.stringify(json, null, 2) + '\n');

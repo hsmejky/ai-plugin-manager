@@ -172,7 +172,7 @@ export function machine(opts = {}) {
     codexHome: opts.codexEnv ? codexHomeDir : undefined,
     fetchJson: async () => ({ ok: false, error: 'offline' }),
     live: false,
-    writeFile: (file, data) => { writes.push(file); writeFileSync(file, data); },
+    writeFile: (file, data) => { writes.push(file); mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, data); },
   };
   if (!opts.codexEnv) {
     // Codex reads ~/.codex/config.toml: put the trust entry there instead of in a custom CODEX_HOME.

@@ -7,6 +7,9 @@
 //   setTomlKey(text, path, key, literal|null)  -> text with `key = literal` set inside table `path`
 //                                                 (inserted, replaced, or removed for null); null if no such table
 //   proposeAdd(env, files, request)            -> { edits } | { refused }
+//   proposePin(env, files, request)            -> { edits } | { refused }   (--pin <m> --ref <r> and --unpin <m>)
+// Known limit: the JSON writer re-serialises the whole file with JSON.stringify (as the spec prescribes), so
+// compact arrays become multi-line and \u escapes are decoded; the diff at confirmation shows such lines.
 //   edits = [{ file, before, after }] (before null when the file does not exist), only for files that change.
 //   files = { claude: text|null, codex: text|null }.
 import { CLAUDE_SETTINGS, CODEX_CONFIG, parseDeclarations, sourceKey, codexUrlFor } from '../../check-setup/scripts/declarations.mjs';
@@ -77,7 +80,9 @@ export function setTomlKey(text, path, key, literal) {
   if (start < 0) return null;
   let end = start + 1;
   while (end < lines.length && !/^\s*\[/.test(lines[end])) end++;
-  const keyLine = new RegExp(`^(\\s*)${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=\\s*(.*)$`);
+  // The key as a bare, "basic" or 'literal' key; a replaced quoted key is written back bare.
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const keyLine = new RegExp(`^(\\s*)(?:${escaped}|"${escaped}"|'${escaped}')\\s*=\\s*(.*)$`);
   for (let i = start + 1; i < end; i++) {
     const m = keyLine.exec(lines[i]);
     if (!m) continue;
@@ -99,7 +104,8 @@ export function setTomlKey(text, path, key, literal) {
 
 // ---------------------------------------------------------------- add
 
-const GITHUB_SHORT = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+// owner/repo: the owner does not start with a dot (so `./x` and `../x` are paths, not repositories); the repo is not `.` or `..`.
+const GITHUB_SHORT = /^[A-Za-z0-9_-][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/;
 const GIT_URL = /^(https?:\/\/|ssh:\/\/|git:\/\/|git@)\S+$/;
 
 /** The source of a marketplace as both Hosts spell it, from `--source`. */
@@ -201,10 +207,21 @@ async function pFindings(env, decls) {
   return [...(await checkPluginDeclarations(env, ctx)), ...(await checkCodexMarketplaceRef(env, ctx))];
 }
 
-/** The first P-check finding that is worse after the edit than before it, or null. */
+const tokens = (message) => new Set(String(message ?? '').match(/[\w@./:#-]+/g) ?? []);
+
+/**
+ * The first P-check finding that is worse after the edit than before it, or null. A finding that was already
+ * failing is worse when its message names something (a plugin, marketplace, ref) the earlier one did not.
+ */
 async function worsened(env, before, after) {
-  const was = new Map((await pFindings(env, before)).map((f) => [key(f), rank(f.status)]));
-  return (await pFindings(env, after)).find((f) => rank(f.status) > (was.get(key(f)) ?? 0)) ?? null;
+  const was = new Map((await pFindings(env, before)).map((f) => [key(f), f]));
+  return (await pFindings(env, after)).find((f) => {
+    if (rank(f.status) === 0) return false;
+    const old = was.get(key(f));
+    if (!old || rank(f.status) > rank(old.status)) return true;
+    const known = tokens(old.message);
+    return [...tokens(f.message)].some((t) => !known.has(t));
+  }) ?? null;
 }
 
 /**

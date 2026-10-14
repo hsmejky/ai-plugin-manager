@@ -39,4 +39,5 @@ The plugin provides the `check-setup` skill, which verifies a project's Project 
 
 - Markdown links: `node --test test/markdown-links.test.mjs` fails when a relative link or anchor in a tracked `.md` file points to a missing file or heading. External URLs are not checked.
 - check-setup skill: `node --test skills/check-setup/scripts/test/*.test.mjs` (see that directory for the suites).
+- Real Host CLIs (opt-in): `CHECK_SETUP_HOST_CLI=1 node --test skills/check-setup/scripts/test/host-cli.test.mjs` compares the test stubs and the documented command names with the installed `claude` and `codex` (skipped per Host when its CLI is absent; without the variable only the offline helper tests run).
 - CI: `.github/workflows/offline-tests.yml` runs all three suites (Markdown links, doc sync, check-setup skill) on every push to `main` and every pull request, on Node 20 and 24, on Linux and Windows. The live check is not run in CI (it needs Host authentication).

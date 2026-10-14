@@ -1,6 +1,6 @@
 // Ties the offline test stubs and the command names in fixes and docs to the installed Host CLIs (#38).
-// The helper tests run offline; the CLI tests skip a Host whose CLI is not installed, and run each CLI
-// only against temporary Host homes (CODEX_HOME, CLAUDE_CONFIG_DIR), never the user's real config.
+// The helper tests run offline. The CLI tests are opt-in (CHECK_SETUP_HOST_CLI=1) and skip a Host whose CLI
+// is not installed; they run each CLI only against temporary Host homes (CODEX_HOME, CLAUDE_CONFIG_DIR), never the user's real config.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
@@ -133,9 +133,14 @@ async function cli(host, args, opts) {
   return r.stdout;
 }
 
+const OPT_IN = 'CHECK_SETUP_HOST_CLI';
+const optedIn = process.env[OPT_IN] === '1';
 const installed = {};
-for (const host of HOSTS) installed[host] = (await runCli(host, ['--version'], { env: isolatedEnv(), cwd: fixture() })).ok;
-const skipUnless = (host) => (installed[host] ? false : `${HOST[host].label} CLI is not installed`);
+if (optedIn) for (const host of HOSTS) installed[host] = (await runCli(host, ['--version'], { env: isolatedEnv(), cwd: fixture() })).ok;
+const skipUnless = (host) => {
+  if (!optedIn) return `opt-in: set ${OPT_IN}=1 to run the real ${HOST[host].label} CLI`;
+  return installed[host] ? false : `${HOST[host].label} CLI is not installed`;
+};
 
 // A local marketplace "m" with plugin "a" 1.0.0, as files relative to the marketplace root.
 const MARKETPLACE = {

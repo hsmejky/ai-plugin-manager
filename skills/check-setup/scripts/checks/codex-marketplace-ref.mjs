@@ -1,5 +1,6 @@
 // P8: a Codex marketplace `ref` that is not a full 40-hex SHA (all-hex of another length, or padded) may break upgrades.
 import { pass, warn, skip } from '../findings.mjs';
+import { setupPointer } from '../setup-pointer.mjs';
 import { CODEX_CONFIG } from '../declarations.mjs';
 
 // Codex treats a ref as a commit only when `is_full_git_sha` holds: exactly 40 ASCII hex characters,
@@ -25,7 +26,7 @@ export async function checkCodexMarketplaceRef(env, { decls: { codex } }) {
     warn(
       base,
       `Codex marketplace ref is not a full commit SHA and may not be a real branch or tag, so upgrades can fail ("git ls-remote returned empty output"): ${bad.map(([n, m, why]) => `"${n}" (ref = ${JSON.stringify(m.raw.ref)} ${why})`).join('; ')}`,
-      `In ${CODEX_CONFIG}, set ref to the full 40-character SHA, or to an existing tag or branch name without surrounding whitespace (for example ${bad.map(([n]) => `[marketplaces.${n}] ref = "<full 40-character SHA or tag>"`).join('; ')}).`,
+      `In ${CODEX_CONFIG}, set ref to the full 40-character SHA, or to an existing tag or branch name without surrounding whitespace (for example ${bad.map(([n]) => `[marketplaces.${n}] ref = "<full 40-character SHA or tag>"`).join('; ')}).\n${setupPointer(...bad.flatMap(([n]) => [`--pin ${n} --ref <tag>`, `--unpin ${n}`]))}`,
     ),
   ];
 }

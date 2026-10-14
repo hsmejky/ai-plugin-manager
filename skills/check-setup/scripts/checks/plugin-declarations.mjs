@@ -1,6 +1,7 @@
 // P3-P7, P9: plugin declarations in the project's Claude settings and Codex config.
 import { pass, warn, fail, skip } from '../findings.mjs';
 import { marketplaceOf } from '../plugins.mjs';
+import { setupPointer } from '../setup-pointer.mjs';
 import { codexUrlFor, CLAUDE_SETTINGS, CODEX_CONFIG } from '../declarations.mjs';
 
 // Marketplaces a Host knows without a project declaration.
@@ -94,7 +95,7 @@ const CODEX_BUILTIN = new Set([
   'openai-primary-runtime',
 ]);
 
-function checkP3(claude) {
+function checkP3({ claude, codex }) {
   const base = { id: 'P3', host: 'claude', layer: 'project' };
   if (claude.state === 'missing') return skip(base, `${CLAUDE_SETTINGS} not found; no Claude plugins declared`);
   if (claude.state === 'invalid') {
@@ -118,10 +119,13 @@ function checkP3(claude) {
   );
   if (undeclared.length === 0) return pass(base, 'Claude settings are valid and every enabled plugin marketplace is declared');
   const names = [...new Set(undeclared.map(marketplaceOf))];
+  const fix = `Add to ${CLAUDE_SETTINGS} under "extraKnownMarketplaces" an entry for ${names.map((n) => `"${n}"`).join(', ')}, e.g. "${names[0]}": { "source": { "source": "github", "repo": "<owner>/<repo>" }, "autoUpdate": true }`;
+  // setup --add copies the declaration from the other Host, so it only helps when Codex declares every marketplace.
+  const fromCodex = codex.state === 'ok' && names.every((n) => codex.marketplaces.has(n));
   return fail(
     base,
     `Enabled plugin(s) without a declared marketplace: ${undeclared.join(', ')}`,
-    `Add to ${CLAUDE_SETTINGS} under "extraKnownMarketplaces" an entry for ${names.map((n) => `"${n}"`).join(', ')}, e.g. "${names[0]}": { "source": { "source": "github", "repo": "<owner>/<repo>" }, "autoUpdate": true }`,
+    fromCodex ? `${fix}\n${setupPointer(...undeclared.map((id) => `--add ${id}`))}` : fix,
   );
 }
 
@@ -161,7 +165,7 @@ function checkP4({ claude, codex }) {
     return fail(
       base,
       `${CODEX_CONFIG} is missing but Claude settings enable plugins`,
-      `Create ${CODEX_CONFIG} with:\n${codexSnippet([...claude.plugins], claude, codex)}`,
+      `Create ${CODEX_CONFIG} with:\n${codexSnippet([...claude.plugins], claude, codex)}\n${setupPointer(...[...claude.plugins].map((id) => `--add ${id}`))}`,
     );
   }
   const undeclared = [...codex.plugins].filter(
@@ -171,7 +175,7 @@ function checkP4({ claude, codex }) {
   return fail(
     base,
     `Codex plugin(s) without a declared marketplace: ${undeclared.join(', ')}`,
-    `Add to ${CODEX_CONFIG}:\n${codexSnippet(undeclared, claude, codex)}`,
+    `Add to ${CODEX_CONFIG}:\n${codexSnippet(undeclared, claude, codex)}\n${setupPointer(...undeclared.map((id) => `--add ${id}`))}`,
   );
 }
 
@@ -196,6 +200,7 @@ function checkP5({ claude, codex }) {
     onlyCodex.length
       ? `Add to "enabledPlugins" in ${CLAUDE_SETTINGS}: ${onlyCodex.map((id) => `"${id}": true`).join(', ')}`
       : '',
+    setupPointer(...[...onlyClaude, ...onlyCodex].map((id) => `--add ${id}`)),
     'Ignore this warning if the plugin is intentionally Host-specific.',
   ]
     .filter(Boolean)
@@ -244,15 +249,16 @@ function pinIssue(name, claudeRef, codexRef) {
   if (codexRef !== null && FULL_SHA.test(codexRef)) {
     return {
       message: `Marketplace "${name}": the Codex ref is a full commit SHA ("${codexRef}"), which Claude Code's marketplace source cannot pin (Claude Code is ${show(claudeRef)})`,
-      fix: `Pin a release tag on both Hosts instead of a SHA: set ref = "<tag>" under [marketplaces.${name}] in ${CODEX_CONFIG} and "ref": "<tag>" in "extraKnownMarketplaces.${name}.source" of ${CLAUDE_SETTINGS}.`,
+      fix: `Pin a release tag on both Hosts instead of a SHA: set ref = "<tag>" under [marketplaces.${name}] in ${CODEX_CONFIG} and "ref": "<tag>" in "extraKnownMarketplaces.${name}.source" of ${CLAUDE_SETTINGS}.\n${setupPointer(`--pin ${name} --ref <tag>`, `--unpin ${name}`)}`,
     };
   }
   if (claudeRef === codexRef) return null;
   const message = `Marketplace "${name}" is pinned differently: Codex is ${show(codexRef)}, Claude Code is ${show(claudeRef)}, so the Hosts can run different plugin content`;
   const unpin = { claude: `remove "ref" from "extraKnownMarketplaces.${name}.source" in ${CLAUDE_SETTINGS}`, codex: `remove ref under [marketplaces.${name}] in ${CODEX_CONFIG}` };
-  if (claudeRef === null) return { message, fix: `Add ${setRef.claude(name, codexRef)}, or ${unpin.codex} to leave both unpinned.` };
-  if (codexRef === null) return { message, fix: `Add ${setRef.codex(name, claudeRef)}, or ${unpin.claude} to leave both unpinned.` };
-  return { message, fix: `Use one tag on both Hosts: set ${setRef.claude(name, claudeRef)}, or set ${setRef.codex(name, codexRef)}.` };
+  const pointer = (ref) => setupPointer(`--pin ${name} --ref ${ref}`, `--unpin ${name}`);
+  if (claudeRef === null) return { message, fix: `Add ${setRef.claude(name, codexRef)}, or ${unpin.codex} to leave both unpinned.\n${pointer(codexRef)}` };
+  if (codexRef === null) return { message, fix: `Add ${setRef.codex(name, claudeRef)}, or ${unpin.claude} to leave both unpinned.\n${pointer(claudeRef)}` };
+  return { message, fix: `Use one tag on both Hosts: set ${setRef.claude(name, claudeRef)}, or set ${setRef.codex(name, codexRef)}.\n${pointer('<tag>')}` };
 }
 
 function checkP9({ claude, codex }) {
@@ -274,5 +280,5 @@ function checkP9({ claude, codex }) {
 }
 
 export async function checkPluginDeclarations(env, { decls: decl }) {
-  return [checkP3(decl.claude), checkP4(decl), checkP5(decl), checkP6(decl), checkP7(decl.claude), checkP9(decl)];
+  return [checkP3(decl), checkP4(decl), checkP5(decl), checkP6(decl), checkP7(decl.claude), checkP9(decl)];
 }

@@ -53,7 +53,8 @@ from the skill or plugin directory: Codex may have deleted the old plugin versio
 
 ## 5. Report
 
-From the JSON alone: per Host the status and each step (`ok` or `failed` with `message`), Codex `changes`
-(version before and after), the changed `projectEdits` files (the skill never commits), the `findings` with id M3, M4 or, after an edit, P3 to P9 (status and fix), then every `manual` step as a
+From the JSON alone: per Host the status and each step (`ok` or `failed` with `message`), the `versions` of each
+Host (per plugin: version before and after, or "up to date" when `changed` is false), the changed `projectEdits`
+files (the skill never commits), the `findings` with id M3, M4 or, after an edit, P3 to P9 (status and fix), then every `manual` step as a
 to-do for the user (trust, `/reload-plugins` or restart, a new Codex session). Claim nothing as done that
 is listed under `manual`.

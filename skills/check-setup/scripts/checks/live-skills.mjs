@@ -12,6 +12,9 @@ import { listInstalledPlugins } from '../plugins.mjs';
 
 
 
+/** The readSkill field that says a Host hides the skill from its model. */
+const HIDDEN_KEY = { claude: 'claudeHidden', codex: 'codexHidden' };
+
 /**
  * True when `agents/openai.yaml` sets `policy.allow_implicit_invocation: false` (Codex hides the skill
  * from the model only for exactly that boolean). Reads the two keys by indentation, not a full YAML parse.
@@ -21,7 +24,11 @@ function codexHidden(dir) {
   if (!existsSync(file)) return false;
   let inPolicy = false;
   for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    if (/^\S/.test(line)) inPolicy = /^policy:\s*(#.*)?$/.test(line);
+    const flow = /^policy:\s*\{(.*)\}\s*(#.*)?$/.exec(line);
+    if (flow) {
+      if (flow[1].split(',').some((kv) => /^\s*allow_implicit_invocation\s*:\s*false\s*$/.test(kv))) return true;
+      inPolicy = false;
+    } else if (/^\S/.test(line)) inPolicy = /^policy:\s*(#.*)?$/.test(line);
     else if (inPolicy && /^\s+allow_implicit_invocation:\s*false\s*(#.*)?$/.test(line)) return true;
   }
   return false;
@@ -60,14 +67,14 @@ function pluginSkills(pluginDir) {
 
 /** Names of the skills the Host's model should see (sorted, unique). */
 function expectedSkills(skills, host) {
-  const hidden = host === 'claude' ? 'claudeHidden' : 'codexHidden';
+  const hidden = HIDDEN_KEY[host];
   return [...new Set(skills.filter((s) => !s[hidden]).map((s) => s.name))].sort();
 }
 
 /** Warnings for skills one Host hides and the other still offers to the model; `host` is the hiding one. */
 function visibilityWarnings(base, id, skills, host) {
-  const mine = host === 'claude' ? 'claudeHidden' : 'codexHidden';
-  const other = host === 'claude' ? 'codexHidden' : 'claudeHidden';
+  const mine = HIDDEN_KEY[host];
+  const other = HIDDEN_KEY[host === 'claude' ? 'codex' : 'claude'];
   const [label, otherLabel] = host === 'claude' ? ['Claude Code', 'Codex'] : ['Codex', 'Claude Code'];
   const setting = {
     claude: '`disable-model-invocation: true` in SKILL.md',
@@ -153,8 +160,10 @@ async function checkHost(host, decl, hostInfo, env, warnings) {
       cwd: env.projectDir,
       timeout: LIVE_TIMEOUT_MS,
     });
-    if (!reply.ok) return skip(base, `${label} could not answer (network, authentication or CLI problem): ${reply.error}`);
     const invalid = settingsErrors(reply.stderr);
+    if (!reply.ok && invalid.length === 0) {
+      return skip(base, `${label} could not answer (network, authentication or CLI problem): ${reply.error}`);
+    }
     if (invalid.length > 0) {
       return fail(
         base,

@@ -41,7 +41,7 @@ export function defaultRunCommand(cmd, args, opts = {}) {
       (err, stdout, stderr) => {
         if (!err) return done({ ok: true, stdout, stderr: String(stderr ?? '') });
         const detail = (stderr || stdout || '').toString().trim().split(/\r?\n/).slice(-3).join(' ').slice(0, 300);
-        done({ ok: false, error: detail && !err.message.includes(detail) ? `${err.message} | ${detail}` : err.message });
+        done({ ok: false, error: detail && !err.message.includes(detail) ? `${err.message} | ${detail}` : err.message, stderr: String(stderr ?? '') });
       },
     );
     child.stdin?.end();

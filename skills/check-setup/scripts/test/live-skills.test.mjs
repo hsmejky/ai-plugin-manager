@@ -241,3 +241,27 @@ test('L1 visibility: Codex hides only when allow_implicit_invocation is exactly 
     assert.equal(l1Main(fs, 'codex').status, 'pass', yaml);
   }
 });
+
+test('L1: settings errors are the cause when claude -p exits non-zero', async () => {
+  const s = setup({ answers: { claude: { ok: false, error: 'exit 1', stdout: '', stderr: SETTINGS_STDERR } } });
+  const f = l1(await s.run(), 'claude');
+  assert.equal(f.status, 'fail');
+  assert.match(f.message, /enabledPlugins/);
+});
+
+test('L1: a non-zero exit without settings errors stays a skip', async () => {
+  const s = setup({ answers: { claude: { ok: false, error: 'exit 1', stderr: 'not logged in' } } });
+  assert.equal(l1(await s.run(), 'claude').status, 'skip');
+});
+
+test('L1 visibility: Codex flow-style policy is read too', async () => {
+  const hidden = ['policy: {allow_implicit_invocation: false}\n', 'policy: { allow_implicit_invocation: false, other: 1 } # c\n'];
+  for (const yaml of hidden) {
+    const fs = await setupGate({ flag: false, yaml, answers: { codex: { ok: true, stdout: 'NONE\n' } } });
+    assert.equal(l1Warns(fs).length, 1, yaml);
+  }
+  for (const yaml of ['policy: {allow_implicit_invocation: true}\n', 'policy: {allow_implicit_invocation: "false"}\n']) {
+    const fs = await setupGate({ flag: false, yaml });
+    assert.equal(l1Warns(fs).length, 0, yaml);
+  }
+});

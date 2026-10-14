@@ -1,6 +1,6 @@
 # State
 
-Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (twelfth: state after PR #52 merged at `adec79d`: plugin 0.5.0, #31 #34 #39 #40 #49 #50 #51 #53 closed; adds P9 (cross-Host marketplace `ref` drift), P3 FAIL for reserved Anthropic marketplace names from a non-Anthropic source, CODEX_HOME support (M2, M6, M4 fix text, L1), M1 tested versions Claude Code 2.1.299 / codex-cli 0.162.1, opt-in live tests `CHECK_SETUP_LIVE_INSTRUCTIONS=1` and `CHECK_SETUP_CODEX_DRIFT=1`; tag `v0.5.0` (lightweight, first release tag) pushed on `adec79d`, which unblocks #55; review: https://github.com/hsmejky/ai-plugin-manager/pull/52#issuecomment-6167854246 filed #54, #55; no Host release check, docs audit or watch-list scan this session; eleventh: PR #48 merged at `9d94837`, #49-#51 filed).
+Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`). Last session: 2026-10-14 (thirteenth: state after PR #56 merged at `c2a3b85` (merge of `integration/issues-2026-10-14-c`): plugin 0.5.1, #54 #55 closed; P3 now fails every offline-decidable reserved marketplace name class from marketplace-reference "Reserved names" (read, not run, Claude Code 2.1.299), the `github.com/anthropics/` exemption applies only to github/git sources and exact `official`/`community`/`directory` names, P7 skips every name P3 fails; excluded: impersonation names without a published rule and the `<owner>-<repo>` download-folder collision; #55 live run on Claude Code 2.1.299: `marketplace add ...#v0.5.0` + `plugin install` installed tag commit `adec79d`, P9 rule and ADR 0002 unchanged; lightweight tag `v0.5.1` pushed on `c2a3b85`; no Host release check, docs audit or watch-list scan this session; twelfth: state after PR #52 merged at `adec79d`: plugin 0.5.0, #31 #34 #39 #40 #49 #50 #51 #53 closed; adds P9 (cross-Host marketplace `ref` drift), P3 FAIL for reserved Anthropic marketplace names from a non-Anthropic source, CODEX_HOME support (M2, M6, M4 fix text, L1), M1 tested versions Claude Code 2.1.299 / codex-cli 0.162.1, opt-in live tests `CHECK_SETUP_LIVE_INSTRUCTIONS=1` and `CHECK_SETUP_CODEX_DRIFT=1`; tag `v0.5.0` (lightweight, first release tag) pushed on `adec79d`, which unblocks #55; review: https://github.com/hsmejky/ai-plugin-manager/pull/52#issuecomment-6167854246 filed #54, #55; no Host release check, docs audit or watch-list scan this session; eleventh: PR #48 merged at `9d94837`, #49-#51 filed).
 
 ## Hosts
 
@@ -11,6 +11,8 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## Watching
 
+- Hand-written `"autoUpdate": true` in project settings was missing after `marketplace add` + `plugin install` (Claude Code 2.1.299, live run 2026-10-14, #55; command not isolated, so cause unverified); `claude -p` installs nothing from a settings-only declaration; automatic update (interactive only) still unverified. Trigger: a Claude Code release note or docs page on marketplace `autoUpdate` or settings-only declarations, or an interactive run by the user; then file an issue to confirm or change the P9 and ADR 0002 wording.
+- Open question for the user (not decided): should the `github.com/anthropics/` exemption in P3 also cover other spellings of a reserved name? The marketplace-reference page is silent; today they fail regardless of source. Trigger: the page states a rule for spellings, or the user decides; then file the issue (`needs-info` if undecided).
 - Agent Plugins root `plugin.json` (agent-plugins.org): Claude Code does not support it (unverified, secondary source; the site was unreachable on 2026-10-14). Trigger: the Claude Code CHANGELOG or docs announce support for a root `plugin.json` or the Agent Plugins spec; then file a research spike on replacing `.claude-plugin/plugin.json`.
 - Claude Code npm dist-tags `latest`/`stable` as the release channels L2 compares against: the mapping is unverified (code.claude.com/docs/en/setup names the channels, not the dist-tags; values matched on 2026-10-14). Trigger: the setup docs or CHANGELOG describe npm dist-tags, or a release where dist-tag and channel differ; then file an issue to confirm or change L2.
 
@@ -24,4 +26,4 @@ Maintained by the `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.m
 
 ## What next
 
-54, 55
+No open issues (`gh issue list --state open` empty on 2026-10-14).

@@ -24,3 +24,5 @@ The `plugin-maintainer` agent (`.claude/agents/plugin-maintainer.md`) adds one p
 | `P2`  | A Host release is not yet processed                        |
 | `P3`  | The docs do not match reality                              |
 | `P4`  | A research finding that would change the project           |
+
+A gap against objective 5, a requested plugin feature that has not reached release, takes the priority the user gave the feature, or `P3` when none was given.

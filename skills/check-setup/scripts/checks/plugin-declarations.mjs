@@ -40,7 +40,8 @@ const CLAUDE_RESERVED = new Set([
   'anthropic-plugin-directory',
   'claude-plugin-directory',
 ]);
-const fromAnthropics = (m) => m.key.startsWith('github.com/anthropics/');
+// Only `github` and `git` sources qualify; a `url`-type source under that host does not (#56).
+const fromAnthropics = (m) => ['github', 'git'].includes(m.raw?.source) && m.key.startsWith('github.com/anthropics/');
 // Names reserved whatever the source (no github.com/anthropics/ exemption). Source: same page,
 // "Reserved names", read 2026-10-14, Claude Code 2.1.299; not run live.
 const NO_MARKETPLACE_NAMES = new Set(['inline', 'builtin', 'skills-dir', 'synced', 'claude-plugin-test']);

@@ -17,10 +17,11 @@ import { checkHostTrust } from './checks/host-trust.mjs';
 import { checkMarketplacePlugins } from './checks/marketplace-plugins.mjs';
 import { checkLiveSkills } from './checks/live-skills.mjs';
 import { checkCodexMarketplaceRef } from './checks/codex-marketplace-ref.mjs';
+import { checkLatestRelease } from './checks/latest-release.mjs';
 import { detectHosts } from './hosts.mjs';
 import { loadDeclarations } from './declarations.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkCodexMarketplaceRef, checkHostTrust, checkMarketplacePlugins, checkLiveSkills];
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkCodexMarketplaceRef, checkHostTrust, checkMarketplacePlugins, checkLiveSkills, checkLatestRelease];
 
 export async function runChecks(env) {
   const context = { hosts: await detectHosts(env), decls: loadDeclarations(env.projectDir) };
@@ -35,7 +36,8 @@ export function defaultRunCommand(cmd, args, opts = {}) {
     const child = execFile(
       cmd,
       args,
-      { timeout: opts.timeout ?? 30000, cwd: opts.cwd, windowsHide: true, maxBuffer: 16 * 1024 * 1024 },
+      // npm is npm.cmd on Windows, which execFile can run only through a shell (fixed arguments only).
+      { timeout: opts.timeout ?? 30000, cwd: opts.cwd, windowsHide: true, shell: cmd === 'npm' && process.platform === 'win32', maxBuffer: 16 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (!err) return done({ ok: true, stdout, stderr: String(stderr ?? '') });
         const detail = (stderr || stdout || '').toString().trim().split(/\r?\n/).slice(-3).join(' ').slice(0, 300);

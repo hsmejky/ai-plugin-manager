@@ -37,5 +37,39 @@ Running a shipped part of the plugin against a Host's Latest release, either rea
 _Avoid_: Live test, smoke test, manual check
 
 **Gap**:
-A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, an unused capability, or a requested feature not yet released.
+A difference between what the project claims or needs and what is true on the current Host releases: a failing check, an untested claim, a stale doc, an unused capability, or a requested feature that has no issue or spec yet, or whose spec in `plugin-maintainer`'s scope closed without a released version bump, release tag or docs follow-up. `plugin-maintainer`'s word for a finding in the Goal agent contract.
 _Avoid_: Drift, debt
+
+## Goal agents
+
+**Goal agent**:
+A subagent definition that owns a long-term goal and works toward it across many sessions, keeping its continuity in durable artifacts (files, issues) rather than in conversation memory. This repo's only Goal agent is `plugin-maintainer`.
+_Avoid_: Maintainer (one instance, not the kind), long-running agent
+
+**Objective**:
+One of the aims a Goal agent's definition lists in ranked order; every issue the Goal agent files serves exactly one Objective.
+_Avoid_: Priority, P-level
+
+**Order**:
+The Goal agent's recommended sequence for working its open issues, derived from Objective rank and dependencies; a recommendation the user may override, never a property of a single issue.
+_Avoid_: Priority, rank, urgency
+
+**Spec-sized**:
+Said of a finding too large for one fresh context window, or not verifiable on its own; it needs a spec and slices before implementation, which the user makes, never the Goal agent.
+_Avoid_: Epic, large gap, big issue
+
+**Goal agent contract**:
+The rules every Goal agent follows regardless of repo: how it files issues, marks its output, keeps its State issue, and what it never writes. What varies per repo (which Goal agents exist, their labels, tracker commands) is the repo's configuration, not part of the contract.
+_Avoid_: Shared contract, Goal agent rules
+
+**State issue**:
+The one tracker issue per Goal agent that holds its Order, Deferred items, Checkpoints and any pending handoff note; the user reads and edits it alongside the agent.
+_Avoid_: State file, state.md, dashboard
+
+**Checkpoint**:
+How far a Goal agent has processed one external source it watches (for example, the last release of a Host it has examined), so the next session resumes from there.
+_Avoid_: Last seen, cursor
+
+**Deferred item**:
+Something a Goal agent has found that nobody can act on until a named external trigger fires; it is filed as an issue only after the trigger fires.
+_Avoid_: Watching, parked issue, backlog item

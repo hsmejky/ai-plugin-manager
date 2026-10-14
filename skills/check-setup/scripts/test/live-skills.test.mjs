@@ -1,0 +1,137 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { runChecks } from '../check-setup.mjs';
+import { fixture, envFor, find } from './helpers.mjs';
+
+const PLUGIN = 'tools@m';
+const skillMd = (name) => `---\nname: ${name}\ndescription: d\n---\n`;
+const pluginFiles = (prefix, names) =>
+  Object.fromEntries(names.map((n) => [`${prefix}/skills/${n}/SKILL.md`, skillMd(n)]));
+
+const projectFiles = {
+  '.claude/settings.json': JSON.stringify({
+    enabledPlugins: { [PLUGIN]: true },
+    extraKnownMarketplaces: { m: { source: { source: 'github', repo: 'o/m' } } },
+  }),
+  '.codex/config.toml': `[marketplaces.m]\nsource_type = "git"\nsource = "https://github.com/o/m.git"\n\n[plugins."${PLUGIN}"]\nenabled = true\n`,
+};
+
+/**
+ * Environment with both Hosts installed and the plugin on disk (Claude installPath in a fixture dir,
+ * Codex cache under the fake home). `answers` maps host -> model reply ({ok,stdout}|{ok:false,error}).
+ */
+function setup({ names = ['alpha', 'beta'], answers = {}, claudeInstalled = true, codexInstalled = true } = {}) {
+  const claudeDir = fixture(pluginFiles('.', names));
+  const homeDir = fixture(pluginFiles('.codex/plugins/cache/m/tools/1.0.0', names));
+  const calls = [];
+  const out = (v) => ({ ok: true, stdout: JSON.stringify(v) });
+  const runCommand = async (cmd, args, opts) => {
+    calls.push({ cmd, args, opts });
+    if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296' : 'codex-cli 0.160.1' };
+    if (args[0] === 'plugin' && args[1] === 'list') {
+      if (cmd === 'claude') {
+        return out(claudeInstalled ? [{ id: PLUGIN, version: '1.0.0', scope: 'project', enabled: false, installPath: claudeDir }] : []);
+      }
+      return out({ installed: codexInstalled ? [{ pluginId: PLUGIN, version: '1.0.0', installed: true, enabled: true, source: { source: 'local' } }] : [], available: [] });
+    }
+    if (args[0] === 'plugin') return out([]);
+    return answers[cmd] ?? { ok: true, stdout: names.join('\n') };
+  };
+  const projectDir = fixture(projectFiles);
+  return { calls, projectDir, run: (live = true) => runChecks(envFor(projectDir, { homeDir, runCommand, live })) };
+}
+
+const l1 = (findings, host) => find(findings, 'L1').find((f) => f.host === host);
+const promptCalls = (calls) => calls.filter((c) => c.args[0] !== '--version' && c.args[0] !== 'plugin');
+
+test('L1: without --live no L1 finding and no model call', async () => {
+  const s = setup();
+  const findings = await s.run(false);
+  assert.equal(find(findings, 'L1').length, 0);
+  assert.equal(promptCalls(s.calls).length, 0);
+});
+
+test('L1: passes per Host when every expected skill is listed', async () => {
+  const s = setup({ answers: { claude: { ok: true, stdout: 'tools:alpha\nbeta\n' }, codex: { ok: true, stdout: '- alpha\n- beta\n- extra\n' } } });
+  const findings = await s.run();
+  assert.equal(l1(findings, 'claude').status, 'pass');
+  assert.equal(l1(findings, 'codex').status, 'pass');
+  assert.equal(l1(findings, 'claude').layer, 'machine');
+});
+
+test('L1: fails naming the missing skill, with a fix', async () => {
+  const s = setup({ answers: { codex: { ok: true, stdout: 'alpha\n' } } });
+  const f = l1(await s.run(), 'codex');
+  assert.equal(f.status, 'fail');
+  assert.match(f.message, /beta/);
+  assert.match(f.message, new RegExp(PLUGIN));
+  assert.notEqual(f.fix, '');
+});
+
+test('L1: NONE is a fail', async () => {
+  const s = setup({ answers: { claude: { ok: true, stdout: 'NONE\n' } } });
+  assert.equal(l1(await s.run(), 'claude').status, 'fail');
+});
+
+test('L1: a failing command (network, auth, CLI) is a skip with the reason', async () => {
+  const s = setup({ answers: { codex: { ok: false, error: 'stream error: dns error: failed to lookup address' } } });
+  const f = l1(await s.run(), 'codex');
+  assert.equal(f.status, 'skip');
+  assert.match(f.message, /dns error/);
+  assert.equal(l1(await s.run(), 'claude').status, 'pass');
+});
+
+test('L1: output without any skill name is a skip, not a fail', async () => {
+  const s = setup({ answers: { claude: { ok: true, stdout: '' } } });
+  assert.equal(l1(await s.run(), 'claude').status, 'skip');
+});
+
+test('L1: skips a Host whose CLI is missing', async () => {
+  const projectDir = fixture(projectFiles);
+  const findings = await runChecks(envFor(projectDir, { live: true }));
+  const f = l1(findings, 'claude');
+  assert.equal(f.status, 'skip');
+  assert.match(f.message, /not installed/);
+});
+
+test('L1: skips when the plugin is not installed (M4 reports it)', async () => {
+  const s = setup({ codexInstalled: false });
+  const f = l1(await s.run(), 'codex');
+  assert.equal(f.status, 'skip');
+  assert.match(f.message, /M4/);
+});
+
+test('L1: skips when the project enables no plugin for the Host', async () => {
+  const projectDir = fixture({ 'AGENTS.md': 'x' });
+  const runCommand = async (cmd, args) =>
+    args[0] === '--version' ? { ok: true, stdout: '2.1.296' } : { ok: false, error: 'x' };
+  const f = l1(await runChecks(envFor(projectDir, { live: true, runCommand })), 'claude');
+  assert.equal(f.status, 'skip');
+});
+
+test('L1: calls each Host in the project directory, never with --bare, and names the plugin', async () => {
+  const s = setup();
+  await s.run();
+  const [claude, codex] = ['claude', 'codex'].map((h) => promptCalls(s.calls).find((c) => c.cmd === h));
+  assert.equal(claude.args[0], '-p');
+  assert.ok(!claude.args.includes('--bare'));
+  assert.match(claude.args.at(-1), /tools/);
+  assert.deepEqual(codex.args.slice(0, 2), ['exec', '--skip-git-repo-check']);
+  assert.equal(claude.opts.cwd, s.projectDir);
+  assert.equal(codex.opts.cwd, s.projectDir);
+  assert.ok(claude.opts.timeout > 30000);
+});
+
+test('L1: a missing plugin directory is a skip', async () => {
+  const s = setup();
+  const homeDir = fixture();
+  const projectDir = s.projectDir;
+  const runCommand = async (cmd, args) => {
+    if (args[0] === '--version') return { ok: true, stdout: '0.160.1' };
+    if (args[1] === 'list') return { ok: true, stdout: JSON.stringify({ installed: [{ pluginId: PLUGIN, version: '1.0.0', installed: true, enabled: true }] }) };
+    return { ok: true, stdout: 'alpha' };
+  };
+  const f = l1(await runChecks(envFor(projectDir, { homeDir, runCommand, live: true })), 'codex');
+  assert.equal(f.status, 'skip');
+  assert.match(f.message, /cache/);
+});

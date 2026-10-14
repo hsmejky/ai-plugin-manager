@@ -1,12 +1,20 @@
 {
   "enabledPlugins": {
-    "mattpocock-skills@mattpocock": true
+    "mattpocock-skills@mattpocock": true,
+    "ai-plugin-manager@ai-plugin-manager": true
   },
   "extraKnownMarketplaces": {
     "mattpocock": {
       "source": {
         "source": "github",
         "repo": "mattpocock/skills"
+      },
+      "autoUpdate": true
+    },
+    "ai-plugin-manager": {
+      "source": {
+        "source": "github",
+        "repo": "hsmejky/ai-plugin-manager"
       },
       "autoUpdate": true
     }

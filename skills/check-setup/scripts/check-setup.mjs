@@ -36,7 +36,7 @@ export function defaultRunCommand(cmd, args, opts = {}) {
       args,
       { timeout: opts.timeout ?? 30000, cwd: opts.cwd, windowsHide: true, maxBuffer: 16 * 1024 * 1024 },
       (err, stdout, stderr) => {
-        if (!err) return done({ ok: true, stdout });
+        if (!err) return done({ ok: true, stdout, stderr: String(stderr ?? '') });
         const detail = (stderr || stdout || '').toString().trim().split(/\r?\n/).slice(-3).join(' ').slice(0, 300);
         done({ ok: false, error: detail && !err.message.includes(detail) ? `${err.message} | ${detail}` : err.message });
       },

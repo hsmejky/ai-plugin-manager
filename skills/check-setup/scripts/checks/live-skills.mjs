@@ -63,6 +63,22 @@ function parseSkillNames(text) {
   return names;
 }
 
+/**
+ * Settings validation problems Claude Code (2.1.299+) prints on stderr of `claude -p`, one
+ * "<file> (<entry>): <problem>" per line after the "These settings files did not load" header.
+ */
+function settingsErrors(stderr) {
+  const text = String(stderr ?? '');
+  const at = text.indexOf('settings files did not load');
+  if (at < 0) return [];
+  return text
+    .slice(at)
+    .split(/\r?\n/)
+    .slice(1)
+    .map((l) => l.trim())
+    .filter((l) => /\(.+\):/.test(l));
+}
+
 async function checkHost(host, decl, hostInfo, env) {
   const base = { id: 'L1', host, layer: 'machine' };
   const { label, configFile } = HOST[host];
@@ -96,6 +112,14 @@ async function checkHost(host, decl, hostInfo, env) {
       timeout: LIVE_TIMEOUT_MS,
     });
     if (!reply.ok) return skip(base, `${label} could not answer (network, authentication or CLI problem): ${reply.error}`);
+    const invalid = settingsErrors(reply.stderr);
+    if (invalid.length > 0) {
+      return fail(
+        base,
+        `${label} did not load these settings files, so nothing in them is in effect (plugins included): ${invalid.join('; ')}`,
+        `Correct the listed entries so the settings file validates (JSON that parses can still be schema-invalid), then rerun with --live.`,
+      );
+    }
     const seen = parseSkillNames(reply.stdout);
     if (seen.size === 0 && !/\bNONE\b/i.test(reply.stdout ?? '')) {
       return skip(base, `${label} answered without any skill name, so the reply cannot be judged`);

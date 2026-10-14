@@ -16,7 +16,9 @@ import { checkPluginDeclarations } from './checks/plugin-declarations.mjs';
 import { checkHostTrust } from './checks/host-trust.mjs';
 import { checkMarketplacePlugins } from './checks/marketplace-plugins.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust, checkMarketplacePlugins];
+import { checkLiveSkills } from './checks/live-skills.mjs';
+
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust, checkMarketplacePlugins, checkLiveSkills];
 
 export async function runChecks(env) {
   const findings = [];
@@ -24,11 +26,20 @@ export async function runChecks(env) {
   return findings;
 }
 
-export function defaultRunCommand(cmd, args) {
+// opts: { cwd, timeout } (model calls pass a longer timeout). stdin is closed so a CLI never waits on it.
+export function defaultRunCommand(cmd, args, opts = {}) {
   return new Promise((done) => {
-    execFile(cmd, args, { timeout: 30000, windowsHide: true }, (err, stdout) =>
-      done(err ? { ok: false, error: err.message } : { ok: true, stdout }),
+    const child = execFile(
+      cmd,
+      args,
+      { timeout: opts.timeout ?? 30000, cwd: opts.cwd, windowsHide: true, maxBuffer: 16 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (!err) return done({ ok: true, stdout });
+        const detail = (stderr || stdout || '').toString().trim().split(/\r?\n/).slice(-3).join(' ').slice(0, 300);
+        done({ ok: false, error: detail ? `${err.message} | ${detail}` : err.message });
+      },
     );
+    child.stdin?.end();
   });
 }
 

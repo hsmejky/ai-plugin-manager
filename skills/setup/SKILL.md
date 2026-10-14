@@ -28,6 +28,9 @@ To declare a Shared plugin in both Hosts first, add `--add <plugin>@<marketplace
 neither Host declares yet, `--source <owner/repo | git URL>`. Pass the same flags to `apply`. A request that would
 fail a check-setup P-check or touch a file shape the writers do not handle is refused: the output has `refused`
 (`message`) and the exit code is 2; show it and stop.
+To move both Hosts' pin of a marketplace to a release tag or branch, use `--pin <marketplace> --ref <tag-or-branch>`; to remove it,
+`--unpin <marketplace>`. A full or short hex SHA is refused, as is a marketplace not declared in both Hosts.
+Use one of `--add`, `--pin`, `--unpin` per run.
 `--project <dir>` overrides the project root (default: git top level of the current directory).
 The script prints one JSON object: `{ digest, request, projectEdits, hosts: { claude, codex }, manual, notes }`. Each Host has
 `status` (`ready`, `skipped`, `stopped`), `reason`, `fix` and `steps` (`cmd`, `args`, `cwd`, `why`).

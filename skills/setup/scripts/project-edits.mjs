@@ -274,3 +274,72 @@ export async function proposeAdd(env, files, request) {
   if (next.codex !== files.codex) edits.push({ file: CODEX_CONFIG, before: files.codex, after: next.codex });
   return { edits, decls: after };
 }
+
+// ---------------------------------------------------------------- pin / unpin
+
+const FULL_SHA = /^[0-9a-f]{40}$/i;
+const HEX = /^[0-9a-f]+$/i;
+
+/** Why `ref` cannot be pinned on both Hosts, or null. */
+function badRef(ref) {
+  if (typeof ref !== 'string' || ref === '') return '--ref must not be empty';
+  if (ref !== ref.trim()) return `--ref "${ref}" has surrounding whitespace, which Codex does not trim`;
+  if (FULL_SHA.test(ref)) return `--ref "${ref}" is a full commit SHA: Claude Code cannot pin a marketplace to a SHA, so the Hosts would be pinned differently (P9). Use a release tag or a branch`;
+  if (HEX.test(ref)) return `--ref "${ref}" is all hex but not a full SHA: Codex looks it up as a branch or tag name and the lookup fails (P8). Use a release tag or a branch`;
+  return null;
+}
+
+/** Set (ref string) or remove (null) `ref` of marketplace `name` in the Claude settings text. */
+function setClaudeRef(text, name, ref) {
+  return editJson(text, (json) => {
+    const source = json.extraKnownMarketplaces?.[name]?.source;
+    if (!isObject(source)) throw new Error(`"extraKnownMarketplaces.${name}.source" in ${CLAUDE_SETTINGS} is not an object`);
+    if (ref === null) delete source.ref;
+    else source.ref = ref;
+  });
+}
+
+/** Set or remove `ref` in [marketplaces.<name>] of the Codex config text; throws when the table is not a plain [table]. */
+function setCodexRef(text, name, ref) {
+  const out = setTomlKey(text, ['marketplaces', name], 'ref', ref === null ? null : tomlString(ref));
+  if (out === null) throw new Error(`the declaration of ${name} in ${CODEX_CONFIG} has no [marketplaces.${name}] table`);
+  return out;
+}
+
+/**
+ * Propose the edits of `--pin <m> --ref <r>` (request.pin, request.ref) or `--unpin <m>` (request.unpin):
+ * the `ref` of marketplace <m> in both Hosts. Same result shape as proposeAdd.
+ */
+export async function proposePin(env, files, request) {
+  const unpin = request.unpin !== undefined;
+  const name = unpin ? request.unpin : request.pin;
+  const ref = unpin ? null : request.ref;
+  if (!unpin) {
+    if (ref === undefined) return refuse('--pin needs --ref <tag-or-branch>');
+    const why = badRef(ref);
+    if (why) return refuse(why);
+  }
+  const before = parseDeclarations({ claudeText: files.claude, codexText: files.codex });
+  for (const h of ['claude', 'codex']) {
+    if (before[h].state === 'invalid') return refuse(`${before[h].file} cannot be read (${before[h].error}); edit it by hand`);
+  }
+  const declared = ['claude', 'codex'].filter((h) => before[h].marketplaces.has(name));
+  if (declared.length === 0) return refuse(`Marketplace "${name}" is not declared in either Host`);
+  if (declared.length === 1) {
+    return refuse(`Marketplace "${name}" is declared only in ${before[declared[0]].file}; declare it in both Hosts first (--add), then pin it`);
+  }
+  const next = { claude: files.claude, codex: files.codex };
+  try {
+    next.claude = setClaudeRef(files.claude, name, ref);
+    next.codex = setCodexRef(files.codex, name, ref);
+  } catch (e) {
+    return refuse(`Unsupported file shape: ${e.message}. Edit the ref of ${name} by hand.`);
+  }
+  const after = parseDeclarations({ claudeText: next.claude, codexText: next.codex });
+  const bad = await worsened(env, before, after);
+  if (bad) return refuse(`${bad.id} (${bad.status}): ${bad.message}`, { finding: bad });
+  const edits = [];
+  if (next.claude !== files.claude) edits.push({ file: CLAUDE_SETTINGS, before: files.claude, after: next.claude });
+  if (next.codex !== files.codex) edits.push({ file: CODEX_CONFIG, before: files.codex, after: next.codex });
+  return { edits, decls: after };
+}

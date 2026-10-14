@@ -10,5 +10,5 @@
 
 ## Consequences
 
-- `state.md` stays in git history. Its open Watching items and last processed Host releases moved to the State issue's `## Deferred items` and `## Checkpoints`; its session log, installed versions and "What next" were dropped.
+- `state.md` stays in git history. Two Watching items moved unchanged and one was rewritten; the reserved-spellings item became #86; the watch list moved to the definition's Watched sources. Its last processed Host releases moved to the State issue's `## Checkpoints`; its session log, installed versions and "What next" were dropped.
 - The agent's only repository write is its project memory (`.claude/agent-memory/plugin-maintainer/`); the definition, `docs/agents/`, `GLOSSARY.md` and the ADRs are the user's.

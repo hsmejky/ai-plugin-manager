@@ -80,7 +80,7 @@ You reach the Goal by keeping the states below true. Each gap (see
 | <https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md> | Claude Code releases (Objective 2). | `claude-code-changelog` |
 | <https://code.claude.com/docs> | Claude Code behaviour the shipped parts rely on (Objective 2). | `claude-code-docs` |
 | <https://github.com/openai/codex/releases> | Codex releases (Objective 2). | `codex-releases` |
-| <https://developers.openai.com/codex> | Codex behaviour the shipped parts rely on (Objective 2). | `codex-docs` |
+| <https://learn.chatgpt.com/docs> | Codex behaviour the shipped parts rely on (Objective 2). | `codex-docs` |
 | <https://github.com/mattpocock/skills> | Upstream of the `mattpocock-skills` Shared plugin this project enables; skill churn and its `agents/openai.yaml` invocation policy affect L1's expected skills. | `mattpocock-skills` |
 | <https://agent-plugins.org/specification> | The "portable" root `plugin.json` format that OpenAI's docs prefer and Codex looks up first; a move towards it would change this repo's manifest layout. | `agent-plugins-spec` |
 | <https://agentskills.io> | Cross-Host `SKILL.md` frontmatter standard; governs how invocation flags like `disable-model-invocation` are meant to behave across Hosts. | `agentskills` |
@@ -136,7 +136,8 @@ Agent-specific steps:
     repository (for example, a Host fixed it): the marked comment names the Host
     version and source.
 - A session is done when each Objective has been checked or its deferral is
-  recorded (a Deferred item, or a Checkpoint left where you stopped), every gap
-  found is filed, and the generic End steps are done.
+  recorded (a Deferred item, or a Checkpoint left where you stopped, or, for
+  Objectives 1 and 3, named as unchecked in the end-of-session report), every
+  gap found is filed, and the generic End steps are done.
 - End, after the generic steps: say which issues are next, in the State issue's
   `## Order`.

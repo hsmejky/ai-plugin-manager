@@ -47,8 +47,8 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 
 ## Goal agent operations
 
-Used by Goal agents (see `docs/agents/goal-agents.md`). Issues labelled
-`goal-agent:*`, like `wayfinder:*` issues, are not triage work.
+Used by Goal agents (see `docs/agents/goal-agents.md`). The State issue
+(`goal-agent:state`), like `wayfinder:*` issues, is not triage work.
 
 - **State label**: `goal-agent:state`. Each Goal agent's scope label is
   `goal-agent:<name>`, listed in `docs/agents/goal-agents.md`.

@@ -17,13 +17,11 @@ Run `node --version`. If the command fails or the major version is below 20, rep
 
 ## 2. Plan (read-only)
 
-Run from the project directory:
+Run from the project directory. In Codex, request escalation for this command too, although it only reads: it starts `git` and both Host CLIs, and the Codex sandbox can stop a sandboxed command from starting child processes (seen on Windows: `spawn EPERM`, no JSON). If escalation is not possible, report that `plan` cannot run in this sandbox and stop.
 
 ```
 node "${CLAUDE_SKILL_DIR}/scripts/setup.mjs" plan
 ```
-
-In Codex, request escalation for this command too, although it only reads: it starts the Claude Code and Codex CLIs, and the Codex sandbox on Windows blocks every child process of a sandboxed command (`spawn EPERM`, no JSON). If escalation is not possible, report that `plan` cannot run in this sandbox and stop.
 
 `${CLAUDE_SKILL_DIR}` is a substitution Claude Code performs in skill content, not an environment variable. If the literal text `${CLAUDE_SKILL_DIR}` remains (Codex), use the path of this skill directory instead.
 To declare a Shared plugin in both Hosts first, add `--add <plugin>@<marketplace>` and, for a marketplace

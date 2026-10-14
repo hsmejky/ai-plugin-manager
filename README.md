@@ -12,12 +12,7 @@ Keeps Claude Code and Codex coordinated at the project level: shared instruction
 
 ## Setting up a machine
 
-The setup skill ships inside the `ai-plugin-manager` plugin, so it does not exist on a fresh machine. Bootstrap order:
-
-1. Install the plugin by hand in one Host (your choice): trust the project in that Host, then follow that Host's steps in the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps) until `ai-plugin-manager@ai-plugin-manager` is installed. Trust is always manual.
-2. Run the setup skill in that Host (`/ai-plugin-manager:setup` in Claude Code, `$ai-plugin-manager:setup` in Codex). It shows a plan, waits for your confirmation, then registers the declared marketplaces and installs the enabled plugins in both Hosts. It stops for a Host whose project is not trusted, so trust the project in the other Host first.
-
-The per-machine steps can also be completed by hand for both Hosts; the skill is a shortcut, not a requirement.
+The setup skill ships inside the `ai-plugin-manager` plugin, so it does not exist on a fresh machine. Install the plugin by hand in one Host and trust the project in the other, then run the setup skill (`/ai-plugin-manager:setup` in Claude Code, `$ai-plugin-manager:setup` in Codex) from the first Host. It shows a plan, waits for your confirmation, then registers the declared marketplaces and installs the enabled plugins in both Hosts; trust stays manual. The steps, in order, are in the [per-machine steps](docs/agents/claude-codex-sharing.md#per-machine-steps).
 
 ## Adopting the plugin in a project
 

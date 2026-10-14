@@ -22,28 +22,27 @@ Project level only. Out of scope:
 
 The concrete plugin list lives in `.claude/settings.json` and `.codex/config.toml`. This document uses `<plugin>@<marketplace>` for an entry in it.
 
+## Related docs
+
+- [Plugin authoring](plugin-authoring.md): manifests, skill layout and invocation, versioning, update mechanics and version drift, local testing. Read it before changing skills, manifests or plugin setup.
+- [Verification](verification.md): how to verify a Project setup and Machine setup.
+
 ## Per-host setup
+
+The Project setup each Host reads:
 
 | | Claude Code | Codex |
 |---|---|---|
 | Instructions | `CLAUDE.md` → `@AGENTS.md` | `AGENTS.md` (native) |
-| Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace and its source) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
-| Skill invocation | `/<plugin>:<skill>` | `$<plugin>:<skill>` or pick from `/skills` |
-| Manual update | `claude plugin update <plugin>@<marketplace>` | `codex plugin marketplace upgrade <marketplace>` (run inside the trusted repository) |
+| Plugin enablement (committed) | `.claude/settings.json` `enabledPlugins` (`<plugin>@<marketplace>`) and `extraKnownMarketplaces` (the marketplace, its source and `"autoUpdate": true`) | `.codex/config.toml` `[marketplaces.<marketplace>]` (`source_type`, `source`; the key equals the marketplace's own name) and `[plugins."<plugin>@<marketplace>"] enabled = true` |
 
-Install each shared plugin only from the marketplace declared for it. A same-named plugin from another marketplace (for example `claude-plugins-official` ships its own `mattpocock-skills`) is a different copy, and the hosts' versions then drift.
+Install each Shared plugin only from the marketplace declared for it. A same-named plugin from another marketplace (for example `claude-plugins-official` ships its own `mattpocock-skills`) is a different copy, and the Hosts' versions then drift.
 
-**Invocation.** Codex documents `$skill` and `/skills` ([Codex skills](https://learn.chatgpt.com/docs/build-skills)), not the `$<plugin>:<skill>` form, which was observed with codex-cli 0.160.1.
-
-**Updates.**
-
-- Claude: off by default for third-party marketplaces. The `extraKnownMarketplaces` entry sets `"autoUpdate": true`, so Claude refreshes the marketplace and updates its plugins in the background, only in interactive sessions, after the first message plus a random delay of up to 10 minutes. `claude -p` does not trigger it. Updates apply on `/reload-plugins` or the next launch. `claude plugin marketplace update <marketplace>` refreshes only the marketplace listing.
-- Codex: `codex plugin marketplace upgrade <marketplace>` refreshes a Git marketplace snapshot. Run it from inside the trusted repository (any subdirectory works); where the marketplace is not configured it fails with `Error: marketplace `<marketplace>` is not configured as a Git marketplace`. Automatic update timing is not verified.
-- Version drift: the plugin manifest sets `version`, and Claude updates only when that string changes, while Codex follows the git marketplace's HEAD. Short drift between releases is expected.
-
-Sources: [Claude Code: keep plugins updated](https://code.claude.com/docs/en/discover-plugins#keep-plugins-updated), [settings reference: extraKnownMarketplaces](https://code.claude.com/docs/en/settings-reference#extraknownmarketplaces); `codex plugin marketplace upgrade --help`.
+How each Host invokes a plugin skill and picks up updates is in the [authoring doc](plugin-authoring.md#invoke-a-skill-in-each-host) ([updates](plugin-authoring.md#how-each-host-picks-up-updates)).
 
 ## Per-machine steps
+
+The Machine setup, once per machine and Host.
 
 1. **Prerequisites:** both CLIs installed, at versions no older than those tested: Claude Code 2.1.296 and codex-cli 0.160.1.
 2. **Claude Code:**

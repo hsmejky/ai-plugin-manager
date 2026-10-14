@@ -28,6 +28,7 @@ The plugin provides the `check-setup` skill, which verifies a project's Project 
 ## Docs
 
 - [claude-codex-sharing.md](docs/agents/claude-codex-sharing.md): how instructions and skills are shared between the hosts.
+- [plugin-authoring.md](docs/agents/plugin-authoring.md): how to create and maintain a Shared plugin for both Hosts (manifests, skills, versioning, updates, local testing).
 - [verification.md](docs/agents/verification.md): how to verify a setup in either Host.
 - [checklist.md](skills/check-setup/checklist.md): every `check-setup` check with rationale and fix.
 - [domain.md](docs/agents/domain.md): domain docs layout.

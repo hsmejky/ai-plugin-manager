@@ -1,6 +1,7 @@
 // M1, M2: Host presence and project trust (machine layer, both Hosts).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseToml } from '../toml.mjs';
 import { pass, warn, fail, skip } from '../findings.mjs';
 import { HOSTS, HOST_LABELS, TESTED_VERSIONS, detectHosts, compareVersions } from '../hosts.mjs';
 
@@ -55,37 +56,22 @@ function claudeTrust(env) {
     : fail(base, `Claude Code trust dialog not accepted for ${key}`, fix);
 }
 
-// Minimal TOML read: the trust_level of the [projects.<path>] table whose path matches.
-function codexTrustLevel(toml, wanted, win) {
-  const norm = (p) => (win ? p.replace(/\//g, '\\').toLowerCase() : p);
-  let inTable = false;
-  let level = null;
-  for (const raw of toml.split(/\r?\n/)) {
-    const line = raw.trim();
-    const header = /^\[\s*projects\.(?:'([^']*)'|"((?:[^"\\]|\\.)*)")\s*\]\s*(?:#.*)?$/.exec(line);
-    if (header) {
-      const path = header[1] ?? header[2].replace(/\\(.)/g, '$1');
-      inTable = norm(path) === wanted;
-      continue;
-    }
-    if (line.startsWith('[')) {
-      inTable = false;
-      continue;
-    }
-    const kv = inTable && /^trust_level\s*=\s*(?:"([^"]*)"|'([^']*)')\s*(?:#.*)?$/.exec(line);
-    if (kv) level = kv[1] ?? kv[2];
-  }
-  return level;
-}
-
 // Codex keys trusted projects in ~/.codex/config.toml; on Windows the path is lowercased.
 function codexTrust(env) {
   const base = { id: 'M2', host: 'codex', layer: 'machine' };
   const win = env.platform === 'win32';
-  const path = win ? env.projectDir.replace(/\//g, '\\').toLowerCase() : env.projectDir;
+  const normalise = (p) => (win ? p.replace(/\//g, '\\').toLowerCase() : p);
+  const path = normalise(env.projectDir);
   const fix = `Run \`codex\` in ${env.projectDir} and accept the trust prompt, or add to ~/.codex/config.toml:\n[projects.'${path}']\ntrust_level = "trusted"`;
-  const toml = readText(join(env.homeDir, '.codex', 'config.toml'));
-  const level = toml === null ? null : codexTrustLevel(toml, path, win);
+  const text = readText(join(env.homeDir, '.codex', 'config.toml'));
+  let projects = {};
+  try {
+    projects = (text === null ? {} : parseToml(text)).projects ?? {};
+  } catch (e) {
+    return warn(base, `~/.codex/config.toml could not be parsed (${e.message}), so trust cannot be checked`, fix);
+  }
+  const found = Object.keys(projects).find((k) => normalise(k) === path);
+  const level = found === undefined ? null : (projects[found]?.trust_level ?? null);
   if (level === 'trusted') return pass(base, `Codex trusts ${path}`);
   return fail(base, level === null ? `No Codex trust entry for ${path} in ~/.codex/config.toml` : `Codex trust_level for ${path} is "${level}", not "trusted"`, fix);
 }

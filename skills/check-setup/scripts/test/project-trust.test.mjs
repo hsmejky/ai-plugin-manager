@@ -132,3 +132,10 @@ test('M2 Codex tolerates comments and trailing comments', async () => {
   const f = await m2('codex', { platform: 'linux', projectDir: POSIX, files: codexToml(toml) });
   assert.equal(f.status, 'pass');
 });
+
+test('M2 Codex warns, with the reason, when config.toml cannot be parsed', async () => {
+  const f = await m2('codex', { platform: 'linux', projectDir: POSIX, files: codexToml('[projects.\nbroken') });
+  assert.equal(f.status, 'warn');
+  assert.match(f.message, /could not be parsed/);
+  assert.match(f.message, /line 1/);
+});

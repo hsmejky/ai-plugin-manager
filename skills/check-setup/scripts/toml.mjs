@@ -13,7 +13,11 @@ function splitPath(text, lineNo) {
     let key = '';
     if (text[i] === '"' || text[i] === "'") {
       const q = text[i++];
-      while (i < text.length && text[i] !== q) key += text[i++];
+      while (i < text.length && text[i] !== q) {
+        // Basic (double-quoted) keys honour backslash escapes; literal (single-quoted) keys do not.
+        if (q === '"' && text[i] === '\\' && i + 1 < text.length) i++;
+        key += text[i++];
+      }
       if (text[i] !== q) throw bad();
       i++;
     } else {

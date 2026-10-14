@@ -21,7 +21,7 @@ Fix: repair the JSON, and add `"<marketplace>": { "source": { "source": "github"
 
 ### P4: Codex project config declares the marketplace and the plugin
 
-Rationale: Codex reads `.codex/config.toml`. Every plugin enabled there (`[plugins."<plugin>@<marketplace>"]`, `enabled = true`) needs its marketplace declared (`[marketplaces.<name>]` with `source_type` and `source`); Codex's built-in marketplaces (`openai-bundled`, `openai-curated`, `openai-primary-runtime`) are exempt for the same reason. If Claude settings enable plugins but `.codex/config.toml` is missing, that is a fail. Malformed TOML is a fail, not a crash. Skip when neither Host declares plugins.
+Rationale: Codex reads `.codex/config.toml`. Every plugin enabled there (`[plugins."<plugin>@<marketplace>"]`, `enabled = true`) needs its marketplace declared (`[marketplaces.<name>]` with `source_type` and `source`); Codex's built-in marketplaces (`openai-bundled`, `openai-curated`, `openai-curated-remote`, `openai-primary-runtime`; source: `codex plugin marketplace list --json` and `codex plugin list --json`, codex-cli 0.162.1, 2026-10-14) are exempt for the same reason. If Claude settings enable plugins but `.codex/config.toml` is missing, that is a fail. Malformed TOML is a fail, not a crash. Skip when neither Host declares plugins.
 Fix: add the two tables, for example `[marketplaces.m]` with `source_type = "git"` and `source = "https://github.com/<owner>/<repo>.git"`, plus `[plugins."a@m"]` with `enabled = true`.
 
 ### P5: Shared plugin sets match across Hosts
@@ -72,7 +72,7 @@ Fix: `claude plugin install <id>` / `codex plugin add <id>`; for a foreign same-
 Compares the installed version of every Shared plugin (enabled by the project in both Hosts) between Claude Code and Codex.
 Rationale: different versions of one plugin make the Hosts behave differently. It is a warn because the Hosts may legitimately update at different times.
 Result: warn on any difference; skip when a Host CLI is missing, a config is unreadable, there are no Shared plugins, or none is installed in both Hosts (M4 reports that).
-Fix: update the Host with the older version (`claude plugin update <id>`, or `codex plugin remove` then `add`), refreshing the marketplace first if needed.
+Fix: update the Host with the older version. Claude Code: `claude plugin marketplace update <marketplace>`, then `claude plugin update <id>`, then restart. Codex: start a Codex session in the project (it upgrades the marketplace at start), or run `codex plugin marketplace upgrade <marketplace>` from the project. Never edit or reset the marketplace checkout by hand.
 
 ## Live check (opt-in)
 

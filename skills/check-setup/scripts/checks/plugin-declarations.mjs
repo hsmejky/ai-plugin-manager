@@ -5,7 +5,14 @@ import { codexUrlFor, CLAUDE_SETTINGS, CODEX_CONFIG } from '../declarations.mjs'
 
 // Marketplaces a Host knows without a project declaration.
 const CLAUDE_BUILTIN = new Set(['claude-plugins-official']);
-const CODEX_BUILTIN = new Set(['openai-bundled', 'openai-curated', 'openai-primary-runtime']);
+// Codex names: `codex plugin marketplace list --json` plus the marketplaces in
+// `codex plugin list --json`, codex-cli 0.162.1 (2026-10-14).
+const CODEX_BUILTIN = new Set([
+  'openai-bundled',
+  'openai-curated',
+  'openai-curated-remote',
+  'openai-primary-runtime',
+]);
 
 function checkP3(claude) {
   const base = { id: 'P3', host: 'claude', layer: 'project' };

@@ -1,7 +1,7 @@
 // M3-M5: marketplaces and plugins installed on this machine, per Host.
 // Listing the CLI's plugins and marketplaces lives in ../plugins.mjs.
 import { warn, fail, pass, skip } from '../findings.mjs';
-import { HOST, HOSTS, skipUnlessRunnable } from '../hosts.mjs';
+import { HOST, HOSTS, compareVersions, skipUnlessRunnable } from '../hosts.mjs';
 import { listInstalledPlugins, listMarketplaces, nameOf, marketplaceOf } from '../plugins.mjs';
 
 const NO_MANIFEST = /marketplace root does not contain a supported manifest/i;
@@ -104,10 +104,13 @@ async function checkM5(decls, hostInfos, env) {
     base,
     `Version drift: ${drift.map((d) => `${d.id} is ${d.claude} in Claude Code and ${d.codex} in Codex`).join('; ')}`,
     drift
-      .map(
-        (d) =>
-          `Update the Host with the older ${d.id}: \`claude plugin update ${d.id}\` (Claude Code) or \`codex plugin remove ${d.id}\` then \`codex plugin add ${d.id}\` (Codex); refresh the marketplace first if needed (\`<host> plugin marketplace update ${marketplaceOf(d.id)}\`).`,
-      )
+      .map((d) => {
+        const m = marketplaceOf(d.id);
+        const claudeFix = `Claude Code has the older ${d.id}: run \`claude plugin marketplace update ${m}\` then \`claude plugin update ${d.id}\`, and restart Claude Code.`;
+        const codexFix = `Codex has the older ${d.id}: start a Codex session in the project (it upgrades the marketplace at start), or run \`codex plugin marketplace upgrade ${m}\` from the project.`;
+        const cmp = compareVersions(d.claude, d.codex);
+        return cmp < 0 ? claudeFix : cmp > 0 ? codexFix : `${claudeFix}\n${codexFix}`;
+      })
       .join('\n'),
   );
 }

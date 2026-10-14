@@ -1,12 +1,7 @@
 // P3-P6: plugin declarations in the project's Claude settings and Codex config.
 import { pass, warn, fail, skip } from '../findings.mjs';
-import {
-  loadDeclarations,
-  marketplaceOf,
-  codexUrlFor,
-  CLAUDE_SETTINGS,
-  CODEX_CONFIG,
-} from '../declarations.mjs';
+import { marketplaceOf } from '../plugins.mjs';
+import { codexUrlFor, CLAUDE_SETTINGS, CODEX_CONFIG } from '../declarations.mjs';
 
 // Marketplaces a Host knows without a project declaration.
 const CLAUDE_BUILTIN = new Set(['claude-plugins-official']);
@@ -109,7 +104,6 @@ function checkP6({ claude, codex }) {
   );
 }
 
-export async function checkPluginDeclarations(env) {
-  const decl = loadDeclarations(env.projectDir);
+export async function checkPluginDeclarations(env, { decls: decl }) {
   return [checkP3(decl.claude), checkP4(decl), checkP5(decl), checkP6(decl)];
 }

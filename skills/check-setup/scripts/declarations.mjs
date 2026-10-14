@@ -13,10 +13,6 @@ import { parseToml } from './toml.mjs';
 export const CLAUDE_SETTINGS = '.claude/settings.json';
 export const CODEX_CONFIG = '.codex/config.toml';
 
-export function marketplaceOf(pluginId) {
-  const at = pluginId.lastIndexOf('@');
-  return at < 0 ? '' : pluginId.slice(at + 1);
-}
 
 function read(projectDir, rel, parse, build) {
   const file = join(projectDir, rel);

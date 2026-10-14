@@ -5,24 +5,26 @@
 //   env = { projectDir, homeDir, platform, runCommand, live }
 //   runCommand(cmd, args) -> Promise<{ ok, stdout?, error? }>  (never throws)
 // To add a check group: create checks/<group>.mjs exporting an async function
-// (env) => Finding[] and append it to CHECK_GROUPS below.
+// (env, { hosts, decls }) => Finding[] and append it to CHECK_GROUPS below.
+// hosts = detectHosts(env) and decls = loadDeclarations(projectDir), computed once per run.
 import { execFile } from 'node:child_process';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkProjectInstructions } from './checks/project-instructions.mjs';
 import { checkPluginDeclarations } from './checks/plugin-declarations.mjs';
-
 import { checkHostTrust } from './checks/host-trust.mjs';
 import { checkMarketplacePlugins } from './checks/marketplace-plugins.mjs';
-
 import { checkLiveSkills } from './checks/live-skills.mjs';
+import { detectHosts } from './hosts.mjs';
+import { loadDeclarations } from './declarations.mjs';
 
 const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkHostTrust, checkMarketplacePlugins, checkLiveSkills];
 
 export async function runChecks(env) {
+  const context = { hosts: await detectHosts(env), decls: loadDeclarations(env.projectDir) };
   const findings = [];
-  for (const group of CHECK_GROUPS) findings.push(...(await group(env)));
+  for (const group of CHECK_GROUPS) findings.push(...(await group(env, context)));
   return findings;
 }
 

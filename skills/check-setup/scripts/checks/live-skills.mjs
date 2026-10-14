@@ -4,20 +4,13 @@
 //   expectedSkills(pluginDir) -> string[] | null   (null: directory missing)
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
+import { readJson } from '../files.mjs';
 import { pass, fail, skip } from '../findings.mjs';
-import { HOSTS, HOST_LABELS, detectHosts } from '../hosts.mjs';
-import { loadDeclarations, CLAUDE_SETTINGS, CODEX_CONFIG } from '../declarations.mjs';
-import { listInstalledPlugins } from './marketplace-plugins.mjs';
+import { HOST, HOSTS, skipUnlessRunnable } from '../hosts.mjs';
 
-const CONFIG_FILE = { claude: CLAUDE_SETTINGS, codex: CODEX_CONFIG };
+import { listInstalledPlugins } from '../plugins.mjs';
 
-function readJson(file) {
-  try {
-    return JSON.parse(readFileSync(file, 'utf8'));
-  } catch {
-    return null;
-  }
-}
+
 
 /** { name, userOnly } from a skill directory, or null when it has no SKILL.md. */
 function readSkill(dir) {
@@ -59,10 +52,6 @@ const promptFor = (plugin) =>
   `List the names of all skills available to you that come from the ${plugin} plugin. ` +
   'Output only the names, one per line, or NONE. Do not run any tools.';
 
-// Never pass --bare to claude: it skips plugin sync, so plugin skills would not be visible.
-const invocation = (host, prompt) =>
-  host === 'claude' ? ['-p', prompt] : ['exec', '--skip-git-repo-check', prompt];
-
 /** Skill names found in a model reply: one token per line, bullets/backticks/`plugin:` prefix removed. */
 export function parseSkillNames(text) {
   const names = new Set();
@@ -74,16 +63,12 @@ export function parseSkillNames(text) {
   return names;
 }
 
-function pluginDir(host, plugin, env) {
-  if (host === 'claude') return plugin.installPath;
-  return join(env.homeDir, '.codex', 'plugins', 'cache', plugin.marketplace, plugin.name, plugin.version ?? '');
-}
-
 async function checkHost(host, decl, hostInfo, env) {
   const base = { id: 'L1', host, layer: 'machine' };
-  const label = HOST_LABELS[host];
-  if (!hostInfo.installed) return skip(base, `${label} CLI is not installed (see M1)`);
-  if (decl.state !== 'ok' || decl.plugins.size === 0) return skip(base, `${CONFIG_FILE[host]} enables no plugin`);
+  const { label, configFile } = HOST[host];
+  const skipped = skipUnlessRunnable(host, decl, hostInfo, base);
+  if (skipped) return skipped;
+  if (decl.plugins.size === 0) return skip(base, `${configFile} enables no plugin`);
   const list = await listInstalledPlugins(host, env);
   if (!list.ok) return skip(base, `Could not list ${label} plugins (${list.error})`);
 
@@ -96,7 +81,7 @@ async function checkHost(host, decl, hostInfo, env) {
       notes.push(`${id} is not installed (see M4)`);
       continue;
     }
-    const dir = pluginDir(host, plugin, env);
+    const dir = HOST[host].pluginDir(plugin, env);
     const expected = dir ? expectedSkills(dir) : null;
     if (expected === null) {
       notes.push(`${id}: plugin directory not found (${dir || 'no installPath'}), cannot determine its skills`);
@@ -106,7 +91,7 @@ async function checkHost(host, decl, hostInfo, env) {
       notes.push(`${id} provides no model-invocable skill`);
       continue;
     }
-    const reply = await env.runCommand(host, invocation(host, promptFor(plugin.name)), {
+    const reply = await env.runCommand(host, HOST[host].promptArgs(promptFor(plugin.name)), {
       cwd: env.projectDir,
       timeout: LIVE_TIMEOUT_MS,
     });
@@ -128,11 +113,9 @@ async function checkHost(host, decl, hostInfo, env) {
   );
 }
 
-export async function checkLiveSkills(env) {
+export async function checkLiveSkills(env, { hosts, decls }) {
   if (!env.live) return [];
-  const decls = loadDeclarations(env.projectDir);
-  const hostInfos = await detectHosts(env);
   const findings = [];
-  for (const host of HOSTS) findings.push(await checkHost(host, decls[host], hostInfos[host], env));
+  for (const host of HOSTS) findings.push(await checkHost(host, decls[host], hosts[host], env));
   return findings;
 }

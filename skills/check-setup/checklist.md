@@ -72,7 +72,7 @@ Fix: `claude plugin install <id>` / `codex plugin add <id>`; for a foreign same-
 Compares the installed version of every Shared plugin (enabled by the project in both Hosts) between Claude Code and Codex.
 Rationale: different versions of one plugin make the Hosts behave differently. It is a warn because the Hosts may legitimately update at different times.
 Result: warn on any difference; skip when a Host CLI is missing, a config is unreadable, there are no Shared plugins, or none is installed in both Hosts (M4 reports that).
-Fix: update the Host with the older version (`claude plugin update <id>`, or `codex plugin remove` then `add`), refreshing the marketplace first if needed.
+Fix: update the Host with the older version. Claude Code: `claude plugin marketplace update <marketplace>`, then `claude plugin update <id>`, then restart. Codex: start a Codex session in the project (it upgrades the marketplace at start), or run `codex plugin marketplace upgrade <marketplace>` from the project. Never edit or reset the marketplace checkout by hand.
 
 ## Live check (opt-in)
 

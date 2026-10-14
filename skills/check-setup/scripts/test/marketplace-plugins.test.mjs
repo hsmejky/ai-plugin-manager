@@ -260,6 +260,21 @@ test('M5 fix names only commands that exist, per Host', async () => {
   assert.doesNotMatch(claudeOlder, /<host>/);
 });
 
+test('M5 does not crash when one Host reports no version, and gives fix text for both Hosts (#20)', async () => {
+  for (const [claude, codex] of [[null, '1.4.0'], ['1.3.1', null]]) {
+    const r = await run(files(['a@m']), {
+      claude: { plugins: claudeInstalled(['a@m', claude]), markets: claudeMarkets('m') },
+      codex: { plugins: codexInstalled(['a@m', codex]), markets: codexMarkets('m') },
+    });
+    const [f] = find(r, 'M5');
+    assert.equal(f.status, 'warn');
+    assert.match(f.message, /a@m/);
+    assert.doesNotMatch(f.message, /null|undefined/);
+    assert.match(f.fix, /claude plugin update a@m/);
+    assert.match(f.fix, /codex plugin marketplace upgrade m/);
+  }
+});
+
 test('M5 only compares Shared plugins (intersection)', async () => {
   const f = {
     ...claudeFiles(['a@m', 'c@m'], { m: 'o/m' }),

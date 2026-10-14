@@ -32,3 +32,8 @@ The plugin provides the `check-setup` skill, which verifies a project's Project 
 - [domain.md](docs/agents/domain.md): domain docs layout.
 - [issue-tracker.md](docs/agents/issue-tracker.md): issue tracker conventions.
 - [triage-labels.md](docs/agents/triage-labels.md): triage labels.
+
+## Tests
+
+- Markdown links: `node --test test/markdown-links.test.mjs` fails when a relative link or anchor in a tracked `.md` file points to a missing file or heading. External URLs are not checked.
+- check-setup skill: `node --test skills/check-setup/scripts/test/` (see that directory for the suites).

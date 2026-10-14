@@ -49,6 +49,13 @@ Rationale: Codex treats a ref as a commit only when `is_full_git_sha` holds: exa
 Result: warn when a `ref` is all hex but not 40 characters (4 to 39: Codex does not treat it as a short SHA, so it fails unless a branch or tag of that name exists. P8 warns deliberately here because it cannot tell offline whether such a branch or tag exists, and the message says so rather than calling it a short SHA; 41 to 64 including a SHA-256 id: not a commit, always looked up as a name) or has surrounding whitespace (Codex does not trim); pass for no `ref`, a full 40-hex SHA, or a tag or branch name; skip when `.codex/config.toml` is missing or unreadable (P4 reports that) or declares no marketplace.
 Fix: set `ref` to the full 40-character SHA, or to a tag or branch name.
 
+### P9: a marketplace declared in both Hosts is pinned the same way
+
+Checked for every marketplace declared in both Hosts. P6 compares sources only; P9 compares the `ref`: `[marketplaces.<name>] ref` in `.codex/config.toml` against `extraKnownMarketplaces.<name>.source.ref` in `.claude/settings.json`. Sources: `docs/research/codex-marketplace-ref-pinning-2026-10-14.md` (#26; codex-cli 0.162.1, source tag `rust-v0.162.1`) and https://code.claude.com/docs/en/plugins/marketplace-reference (Claude Code docs checked 2026-10-14; not run live).
+Rationale: a pinned Codex marketplace stays on its ref (`codex plugin marketplace upgrade` and the start-up upgrade do nothing while `ref` is unchanged), and Claude Code follows the pinned branch or tag of its marketplace checkout. With a one-sided or mismatched pin the Hosts keep different plugin content until someone moves a pin. Claude Code's marketplace `ref` takes a branch or tag, not a SHA, so a Codex full 40-hex SHA can never match it.
+Result: warn when the two refs differ (one side pinned and the other not, or two different refs), or when the Codex `ref` is a full 40-hex SHA, whatever Claude Code has; pass when no ref is set on either side or both are the same; skip when no marketplace is declared in both Hosts. Refs are compared as exact strings.
+Fix: name the pin to set on the other Host, or remove the pin; for a SHA, use a release tag on both Hosts. Links the [pinning docs](../../docs/agents/plugin-authoring.md#pin-a-marketplace-to-a-release).
+
 ## Machine setup
 
 ### M1: Host CLI installed and at least the tested version

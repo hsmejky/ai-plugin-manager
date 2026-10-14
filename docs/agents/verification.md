@@ -43,9 +43,9 @@ claude -p "In which language must project artifacts be written, according to the
 codex exec --skip-git-repo-check "In which language must project artifacts be written, according to the project instructions? Answer in one word. Do not run any tools."
 ```
 
-Pass: both answer `English` (the project language rule in `AGENTS.md`). Any specific rule from `AGENTS.md` works.
+Pass: both answer `English` (the project language rule in `AGENTS.md`). Any specific rule from `AGENTS.md` works. Automated, opt-in: see [Live instructions and negative checks](#live-instructions-and-negative-checks).
 
-Negative check: run the `codex exec` skills command from a directory outside the repository. It must output `NONE`, provided the plugin is not also enabled in the user-level Codex config.
+Negative check: run the `codex exec` skills command from a directory outside the repository. It must output `NONE`, provided the plugin is not also enabled in the user-level Codex config. Automated in the same opt-in test.
 
 ## Manual checks of Host behaviour
 
@@ -62,8 +62,6 @@ Claims in this repository's docs and in `check-setup` fixes that describe how a 
 | Version drift and the version-bump rule: Claude Code keeps the cached copy until `version` changes; Codex upgrades by git revision and ignores `version` | [authoring doc](plugin-authoring.md#versioning) | Source: research §4 | Claude Code docs; codex-cli source `rust-v0.162.1` (not run) |
 | Local testing: `claude --plugin-dir` loads the plugin as `<name>@inline`; a local marketplace loads relative-path plugins in place; Codex has no `--plugin-dir` equivalent and its cache refresh on an unchanged `version` is open | [authoring doc](plugin-authoring.md#test-an-unreleased-change-locally) | Follow the section on a throwaway change | Research §5, 2026-10-14 (not all run) |
 | Manifest semantics: Codex skills root replaced by the `skills` array; blank `name` falls back to the directory name; `version` is trimmed; `$<plugin>:<skill>` invocation | [authoring doc](plugin-authoring.md#plugin-manifest) | Source: [research §2, §3](../research/plugin-authoring-both-hosts.md) | codex-cli source `rust-v0.162.1`; `$<plugin>:<skill>` observed on 0.160.1 |
-| The instructions check above makes both Hosts answer `English` | [Verify by hand](#verify-by-hand) | Run the two prompts | Claude Code 2.1.299, codex-cli 0.160.1 |
-| The negative check above lists `NONE` outside the repository | [Verify by hand](#verify-by-hand) | Run the `codex exec` skills prompt from another directory | codex-cli 0.160.1 |
 | `claude plugin install` leaves the content of `.claude/settings.json` unchanged but rewrites it with LF line endings | [sharing doc](claude-codex-sharing.md#per-machine-steps) | Install a project-scope plugin on Windows into a checkout with CRLF settings; compare bytes and `git status` | Version not recorded (claim from commit `54a08e4`, 2026-10-13, which names none); not rerun |
 | Committed `.claude/settings.json` takes precedence over a marketplace added with `claude plugin marketplace add`, so `autoUpdate` still applies | [sharing doc](claude-codex-sharing.md#per-machine-steps) | Add the marketplace by hand, then read the effective `autoUpdate` in `/plugin` > Marketplaces | Unverified: no docs page cited as of 2026-10-14, not run |
 | `claude plugin install <plugin> --marketplace <source>` adds and installs in one step and declares the marketplace in user settings (Claude Code 2.1.292+; in-session `/plugin install ... --marketplace` 2.1.275+) | [sharing doc](claude-codex-sharing.md#per-machine-steps) | Run it with a throwaway marketplace; check user settings | Claude Code docs (`plugins/install`); not run |
@@ -80,4 +78,8 @@ Automated against the installed CLIs, no network or authentication ([`host-cli.t
 - The offline test stubs (`test/host-stubs.mjs`) of `claude plugin list --json`, `claude plugin marketplace list --json`, `codex plugin list --json` and `codex plugin marketplace list --json`: every stub key exists in the real output with the same type and nesting (extra real keys are allowed). The GitHub (Claude Code) and Git (Codex) marketplace entries are seeded into the temporary Host state, because adding one needs network. Passed on Claude Code 2.1.299 and codex-cli 0.162.1.
 - Command names and flags in fix texts and docs: every `<host> plugin [marketplace] <command> --<flag>` and `<host> --<flag>` in the checklist, the check-setup sources (including the install and uninstall verbs in `hosts.mjs`), `docs/agents/` and `README.md` must appear in the matching `--help` output. Passed on Claude Code 2.1.299 and codex-cli 0.162.1.
 
-Not yet automated, although automatable: the instructions and negative checks (they need network and Host authentication) and the Codex drift test (it needs network, no login), so opt-in like L1. Follow-ups: [#39](https://github.com/hsmejky/ai-plugin-manager/issues/39) (instructions and negative checks), [#40](https://github.com/hsmejky/ai-plugin-manager/issues/40) (Codex drift test).
+### Live instructions and negative checks
+
+The instructions check (both Hosts) and the negative check (`codex exec` outside the repository) run as opt-in live tests: `CHECK_SETUP_LIVE_INSTRUCTIONS=1 node --test skills/check-setup/scripts/test/live-instructions.test.mjs` ([`live-instructions.test.mjs`](../../skills/check-setup/scripts/test/live-instructions.test.mjs)). They make model calls and need network and logged-in Hosts; without the variable they skip. Each Host runs in temporary homes (`CLAUDE_CONFIG_DIR`, `HOME`, `USERPROFILE`; `CODEX_HOME`) holding only a copy of its credentials file (`~/.claude/.credentials.json`, `~/.codex/auth.json`), never the real config; a Host without that file is skipped. Because the temporary Codex home enables no plugin, the negative check also satisfies its proviso. Passed on Claude Code 2.1.299 and codex-cli 0.162.1 (Windows, 2026-10-14). After a Host release, rerun it.
+
+Not yet automated, although automatable: the Codex drift test (it needs network, no login), so opt-in like L1. Follow-up: [#40](https://github.com/hsmejky/ai-plugin-manager/issues/40).

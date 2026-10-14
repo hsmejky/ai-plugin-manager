@@ -265,3 +265,61 @@ test('L1 visibility: Codex flow-style policy is read too', async () => {
     assert.equal(l1Warns(fs).length, 0, yaml);
   }
 });
+
+// Two entries for the same plugin id (user scope and this project's scope): the chosen rule is that the
+// project/local entry is used, whatever the CLI order. Which entry Claude Code itself loads is unverified.
+for (const order of ['user first', 'project first']) {
+  test(`L1: with a user and a project entry for one plugin, the project entry decides (${order})`, async () => {
+    const projectDir = fixture(projectFiles);
+    const userDir = fixture(pluginFiles('.', ['stale']));
+    const projectPlugin = fixture(pluginFiles('.', ['alpha', 'beta']));
+    const homeDir = fixture();
+    const user = { id: PLUGIN, version: '1.0.0', scope: 'user', enabled: true, installPath: userDir };
+    const project = { id: PLUGIN, version: '1.0.0', scope: 'project', projectPath: projectDir, enabled: true, installPath: projectPlugin };
+    const runCommand = async (cmd, args) => {
+      if (args[0] === '--version') return { ok: true, stdout: cmd === 'claude' ? '2.1.296' : 'codex-cli 0.160.1' };
+      if (args[0] === 'plugin') return { ok: true, stdout: JSON.stringify(cmd === 'claude' ? (order === 'user first' ? [user, project] : [project, user]) : []) };
+      return { ok: true, stdout: 'alpha\nbeta\n' };
+    };
+    const findings = await runChecks(envFor(projectDir, { homeDir, runCommand, live: true }));
+    assert.equal(l1(findings, 'claude').status, 'pass');
+  });
+}
+
+// ---- openai.yaml shapes the line reader used to misread (#44) ----
+
+test('L1 visibility: valid YAML shapes of allow_implicit_invocation: false are all read as hidden', async () => {
+  const hidden = [
+    'policy:\n# note\n  allow_implicit_invocation: false\n',
+    'policy:\n  "allow_implicit_invocation": false\n',
+    'policy:\n  allow_implicit_invocation: False\n',
+    '﻿policy:\n  allow_implicit_invocation: false\n',
+    'policy: {\n  other: 1,\n  allow_implicit_invocation: false\n}\n',
+  ];
+  for (const yaml of hidden) {
+    const fs = await setupGate({ flag: false, yaml, answers: { codex: { ok: true, stdout: 'NONE\n' } } });
+    assert.equal(l1Warns(fs).length, 1, yaml);
+    assert.equal(l1Warns(fs)[0].host, 'codex', yaml);
+  }
+});
+
+test('L1 visibility: a deeper allow_implicit_invocation under another policy key is not the policy setting', async () => {
+  const fs = await setupGate({ flag: false, yaml: 'policy:\n  other:\n    allow_implicit_invocation: false\n' });
+  assert.equal(l1Warns(fs).length, 0);
+  assert.equal(l1Main(fs, 'codex').status, 'pass');
+});
+
+test('L1 visibility: an openai.yaml the reader cannot judge is a note, never visible or hidden', async () => {
+  const yaml = 'policy:\n  allow_implicit_invocation: *flag\n';
+  const fs = await setupGate({ flag: false, yaml, answers: { codex: { ok: true, stdout: 'NONE\n' } } });
+  const warns = l1Warns(fs);
+  assert.equal(warns.length, 1);
+  assert.equal(warns[0].host, 'codex');
+  assert.match(warns[0].message, /cannot tell/);
+  assert.match(warns[0].message, /gate/);
+  assert.ok(warns[0].fix);
+  assert.doesNotMatch(warns[0].message, /still offers/);
+  // the skill is neither required from the model nor reported hidden
+  assert.equal(l1Main(fs, 'codex').status, 'skip');
+  assert.equal(l1Main(fs, 'claude').status, 'pass');
+});

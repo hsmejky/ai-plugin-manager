@@ -8,6 +8,7 @@ import { readJson } from '../files.mjs';
 import { pass, fail, skip, warn } from '../findings.mjs';
 import { HOST, HOSTS, skipUnlessRunnable } from '../hosts.mjs';
 
+import { implicitInvocationDisabled } from '../openai-yaml.mjs';
 import { listInstalledPlugins } from '../plugins.mjs';
 
 
@@ -16,22 +17,17 @@ import { listInstalledPlugins } from '../plugins.mjs';
 const HIDDEN_KEY = { claude: 'claudeHidden', codex: 'codexHidden' };
 
 /**
- * True when `agents/openai.yaml` sets `policy.allow_implicit_invocation: false` (Codex hides the skill
- * from the model only for exactly that boolean). Reads the two keys by indentation, not a full YAML parse.
+ * Whether `agents/openai.yaml` sets `policy.allow_implicit_invocation: false` (Codex hides the skill from the
+ * model only for exactly that boolean): true, false, or null when the file cannot be read reliably.
  */
 function codexHidden(dir) {
   const file = join(dir, 'agents', 'openai.yaml');
   if (!existsSync(file)) return false;
-  let inPolicy = false;
-  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const flow = /^policy:\s*\{(.*)\}\s*(#.*)?$/.exec(line);
-    if (flow) {
-      if (flow[1].split(',').some((kv) => /^\s*allow_implicit_invocation\s*:\s*false\s*$/.test(kv))) return true;
-      inPolicy = false;
-    } else if (/^\S/.test(line)) inPolicy = /^policy:\s*(#.*)?$/.test(line);
-    else if (inPolicy && /^\s+allow_implicit_invocation:\s*false\s*(#.*)?$/.test(line)) return true;
+  try {
+    return implicitInvocationDisabled(readFileSync(file, 'utf8'));
+  } catch {
+    return null;
   }
-  return false;
 }
 
 /** { name, claudeHidden, codexHidden } from a skill directory, or null when it has no SKILL.md. */
@@ -68,7 +64,7 @@ function pluginSkills(pluginDir) {
 /** Names of the skills the Host's model should see (sorted, unique). */
 function expectedSkills(skills, host) {
   const hidden = HIDDEN_KEY[host];
-  return [...new Set(skills.filter((s) => !s[hidden]).map((s) => s.name))].sort();
+  return [...new Set(skills.filter((s) => s[hidden] === false).map((s) => s.name))].sort();
 }
 
 /** Warnings for skills one Host hides and the other still offers to the model; `host` is the hiding one. */
@@ -81,12 +77,25 @@ function visibilityWarnings(base, id, skills, host) {
     codex: '`policy.allow_implicit_invocation: false` in agents/openai.yaml',
   };
   return skills
-    .filter((s) => s[mine] && !s[other])
+    .filter((s) => s[mine] === true && s[other] === false)
     .map((s) =>
       warn(
         base,
         `${id}: skill ${s.name} is hidden from the model in ${label} (${setting[host]}) but ${otherLabel} still offers it`,
         `To make the skill user-only in both Hosts, set both ${setting.claude} and ${setting.codex}; to keep it model-invocable in both, remove ${setting[host].split(' in ')[0]}.`,
+      ),
+    );
+}
+
+/** Warnings for skills whose agents/openai.yaml cannot be read reliably: L1 does not judge their visibility. */
+function unreadableWarnings(base, id, skills) {
+  return skills
+    .filter((s) => s.codexHidden === null)
+    .map((s) =>
+      warn(
+        base,
+        `${id}: cannot tell whether Codex hides skill ${s.name}: agents/openai.yaml is not in a form L1 reads reliably, so the skill is not checked`,
+        'Write policy.allow_implicit_invocation as a plain block (policy:, then an indented allow_implicit_invocation: false) or a one-line flow map, without anchors, aliases, duplicate keys or tab indentation.',
       ),
     );
 }
@@ -148,6 +157,7 @@ async function checkHost(host, decl, hostInfo, env, warnings) {
     const skills = dir ? pluginSkills(dir) : null;
     const expected = skills && expectedSkills(skills, host);
     if (skills) warnings.push(...visibilityWarnings(base, id, skills, host));
+    if (skills && host === 'codex') warnings.push(...unreadableWarnings(base, id, skills));
     if (expected === null) {
       notes.push(`${id}: plugin directory not found (${dir || 'no installPath'}), cannot determine its skills`);
       continue;

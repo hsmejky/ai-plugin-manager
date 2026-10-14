@@ -2,8 +2,9 @@
 // check-setup: verify the shared agent setup. Read-only; never changes anything.
 //
 // runChecks(env) -> Promise<Finding[]>
-//   env = { projectDir, homeDir, platform, runCommand, live }
+//   env = { projectDir, homeDir, platform, runCommand, fetchJson, live }
 //   runCommand(cmd, args) -> Promise<{ ok, stdout?, error? }>  (never throws)
+//   fetchJson(url) -> Promise<{ ok, json?, error? }>  (never throws; L2 only)
 // To add a check group: create checks/<group>.mjs exporting an async function
 // (env, { hosts, decls }) => Finding[] and append it to CHECK_GROUPS below.
 // hosts = detectHosts(env) and decls = loadDeclarations(projectDir), computed once per run.
@@ -18,10 +19,11 @@ import { checkMarketplacePlugins } from './checks/marketplace-plugins.mjs';
 import { checkLiveSkills } from './checks/live-skills.mjs';
 import { checkCodexMarketplaceRef } from './checks/codex-marketplace-ref.mjs';
 import { checkLatestRelease } from './checks/latest-release.mjs';
+import { checkCodexFeatures } from './checks/codex-features.mjs';
 import { detectHosts } from './hosts.mjs';
 import { loadDeclarations } from './declarations.mjs';
 
-const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkCodexMarketplaceRef, checkHostTrust, checkMarketplacePlugins, checkLiveSkills, checkLatestRelease];
+const CHECK_GROUPS = [checkProjectInstructions, checkPluginDeclarations, checkCodexMarketplaceRef, checkHostTrust, checkCodexFeatures, checkMarketplacePlugins, checkLiveSkills, checkLatestRelease];
 
 export async function runChecks(env) {
   const context = { hosts: await detectHosts(env), decls: loadDeclarations(env.projectDir) };
@@ -36,8 +38,7 @@ export function defaultRunCommand(cmd, args, opts = {}) {
     const child = execFile(
       cmd,
       args,
-      // npm is npm.cmd on Windows, which execFile can run only through a shell (fixed arguments only).
-      { timeout: opts.timeout ?? 30000, cwd: opts.cwd, windowsHide: true, shell: cmd === 'npm' && process.platform === 'win32', maxBuffer: 16 * 1024 * 1024 },
+      { timeout: opts.timeout ?? 30000, cwd: opts.cwd, windowsHide: true, maxBuffer: 16 * 1024 * 1024 },
       (err, stdout, stderr) => {
         if (!err) return done({ ok: true, stdout, stderr: String(stderr ?? '') });
         const detail = (stderr || stdout || '').toString().trim().split(/\r?\n/).slice(-3).join(' ').slice(0, 300);
@@ -46,6 +47,17 @@ export function defaultRunCommand(cmd, args, opts = {}) {
     );
     child.stdin?.end();
   });
+}
+
+// GET a JSON document: { ok: true, json } or { ok: false, error }. Never throws; aborts after the timeout.
+export async function defaultFetchJson(url, opts = {}) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(opts.timeout ?? 30000), headers: { accept: 'application/json' } });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status} from ${url}` };
+    return { ok: true, json: await res.json() };
+  } catch (e) {
+    return { ok: false, error: `${e?.cause?.code ?? e?.name ?? 'error'}: ${e?.message ?? e} (${url})` };
+  }
 }
 
 function gitTopLevel(dir) {
@@ -66,6 +78,7 @@ export async function main(argv) {
     homeDir: homedir(),
     platform: process.platform,
     runCommand: defaultRunCommand,
+    fetchJson: defaultFetchJson,
     live,
   });
   process.stdout.write(JSON.stringify({ projectDir, findings }, null, 2) + '\n');

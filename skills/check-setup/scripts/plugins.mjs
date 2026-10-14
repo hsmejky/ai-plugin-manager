@@ -3,7 +3,7 @@
 //   listInstalledPlugins(host, env) -> { ok, plugins: [{ id, name, marketplace, version, enabled, installPath?, source? }], error? }
 //   listMarketplaces(host, env)     -> { ok, marketplaces: [{ name, ... }], error? }
 // "installed" comes from the CLI list; "enabled" for Claude comes from the project's declarations,
-// because `claude plugin list --json` reports enabled:false for plugins enabled only in project settings.
+// because `claude plugin list --json` reports enabled:false on entries of other projects (2.1.299), so the flag depends on the CWD.
 import { HOST } from './hosts.mjs';
 
 export function nameOf(pluginId) {

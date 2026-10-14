@@ -31,7 +31,7 @@ No Codex manifest is needed for the current plugin, and none is added here ([res
 | `plugins[].description` | Entry description. |
 | `plugins[].category` | Category. Codex reads it; OpenAI's docs call it required, Codex's source defaults it ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). Keep it set. |
 
-Codex also reads an optional `policy` per entry, and keeps other entry keys as an inline fallback manifest when the plugin root has no manifest file ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). In Claude Code, entry fields combine with `plugin.json` according to the entry's `strict` flag ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)).
+Codex also reads a `policy` per entry; OpenAI's docs call it required, Codex's source treats it as optional and this repo's entry omits it ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)), and keeps other entry keys as an inline fallback manifest when the plugin root has no manifest file ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)). In Claude Code, entry fields combine with `plugin.json` according to the entry's `strict` flag ([research §1](../research/plugin-authoring-both-hosts.md#1-how-the-host-discovers-and-reads-a-marketplace)).
 ## Plugin manifest
 
 `.claude-plugin/plugin.json` describes the plugin. Claude Code requires only `name` when the file exists and strips unknown top-level keys with a validation warning ([research §2](../research/plugin-authoring-both-hosts.md#2-does-codex-need-its-own-manifest)). Codex reads `name`, `version`, `description`, `keywords`, `skills`, `mcpServers`, `apps`, `hooks`, `interface` and `extensions`, and ignores other keys ([research §2](../research/plugin-authoring-both-hosts.md#2-does-codex-need-its-own-manifest)).
@@ -118,7 +118,7 @@ Claude Code updates when the `version` string changes; Codex updates when the ma
 
 ## Test an unreleased change locally
 
-Run the repository tests first: `node --test test/markdown-links.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root.
+Run the repository tests first: `node --test test/markdown-links.test.mjs` and `node --test skills/check-setup/scripts/test/*.test.mjs`. Then `claude plugin validate .` from the repository root. On Claude Code 2.1.299 a good result ends with `Validation passed with warnings`: the warning `CLAUDE.md at the plugin root is not loaded as project context` is inherent to this layout (ADR 0001) and the Project setup needs that `CLAUDE.md`, so do not remove it. The advice to add a one-step install line (`/plugin install ai-plugin-manager --marketplace hsmejky/ai-plugin-manager`) is optional; errors are what to fix.
 
 ### Claude Code
 

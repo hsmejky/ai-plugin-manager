@@ -11,7 +11,7 @@ Fix: create `AGENTS.md` in the project root with the shared agent instructions.
 
 ### P2: `CLAUDE.md` exists and imports `@AGENTS.md`
 
-Rationale: Claude Code reads `CLAUDE.md`, not `AGENTS.md`. A line `@AGENTS.md` in it makes Claude Code load the shared instructions.
+Rationale: Claude Code reads `AGENTS.md` natively (2.1.277+) only when no `CLAUDE.md` exists in the working directory or above, and not in every session ([memory](https://code.claude.com/docs/en/memory#agents-md)). A `CLAUDE.md` with the line `@AGENTS.md` makes every session load the shared instructions.
 Fix: create `CLAUDE.md` containing the line `@AGENTS.md`, or add that line to the existing file.
 
 ### P3: Claude settings are valid and every enabled plugin's marketplace is declared
@@ -74,7 +74,7 @@ Fix: `claude plugin marketplace add <owner/repo>` or `codex plugin marketplace a
 ### M4: expected plugins are installed and enabled from the declared marketplace
 
 Checked per Host, for the plugins that Host's own project config enables (not only the Shared plugins), against `claude plugin list --json` / `codex plugin list --json`. The id must match exactly, `plugin@marketplace`.
-- Claude: "enabled" is deliberately not checked against the CLI. `claude plugin list --json` reports `enabled: false` for plugins enabled only through project settings, which is how the shared setup enables them, so the flag would give a false fail. The project's `enabledPlugins` is the source of truth for "enabled"; only "installed" is read from the CLI.
+- Claude: "enabled" is deliberately not checked against the CLI. `claude plugin list --json` reports a project-scope plugin as `enabled: true` only for the current project (Claude Code 2.1.299, 2026-10-14: `"scope":"project","enabled":true,"projectEnabled":true`); `enabled: false` appears on entries that belong to other projects, so the flag depends on which project the CLI runs in. The project's `enabledPlugins` is the source of truth for "enabled"; only "installed" is read from the CLI.
 - Codex: the installed entry must also report `enabled: true`.
 Rationale: a plugin that is declared but not installed does nothing, and a same-named plugin from a different marketplace is different code under the same name.
 Result: fail when a plugin is not installed, is disabled (Codex), or only a same-named plugin from another marketplace is installed; warn when the list command fails (Codex gets the same manifest-specific fix as in M3); skip as for M3, or when the Host enables no plugin.

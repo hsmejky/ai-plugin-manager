@@ -13,7 +13,7 @@ The live check (L1) is opt-in: it makes one model call per Host and plugin and n
 
 ## Read the report
 
-The report starts with a summary line (counts of fail, warn, skip and pass), followed by one table per group, in this order: Claude Code, Codex, then Both Hosts, each for Project setup and then Machine setup; empty groups are omitted. Each finding has:
+The report starts with a summary line (counts of fail, warn, skip and pass), followed by one table per group, in this order: Claude Code / Project setup, Codex / Project setup, Both Hosts / Project setup, then the same three for Machine setup; empty groups are omitted. Each finding has:
 
 - a check id (see [the checklist](../../skills/check-setup/checklist.md) for what each check verifies, why, and how to fix it)
 - a status: `pass`, `warn`, `fail` or `skip`

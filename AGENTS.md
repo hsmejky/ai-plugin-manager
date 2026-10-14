@@ -30,7 +30,7 @@ It ends with verifying the setup per `docs/agents/verification.md`.
 
 ## Plugin versioning
 
-Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Codex follows the marketplace HEAD and has no manifest here; bump any Codex manifest added later in the same commit.
+Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Tag that commit `v<version>` (for example `v0.5.0`) once it is on `main`; the maintainer creates and pushes the tag, agents never do ([release tags](docs/agents/plugin-authoring.md#release-tags)). Codex follows the marketplace HEAD at each Codex start, or the `ref` of a pinned marketplace ([pinning](docs/agents/plugin-authoring.md#pin-a-marketplace-to-a-release)), and has no manifest here; bump any Codex manifest added later in the same commit.
 
 ## Token economy
 

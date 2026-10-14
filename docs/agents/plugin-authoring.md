@@ -103,6 +103,10 @@ Every user-facing change to the plugin (skills, checklist, scripts, manifests) b
 
 Why: Claude Code resolves a plugin's version from the manifest `version` first, and a pinned `version` keeps users on their cached copy until that string changes, however many commits are pushed ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)). A change pushed without a bump never reaches Claude Code users. For Codex the bump is harmless: its git upgrade path does not compare the `version` string ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)). If a Codex manifest is ever added, bump its `version` in the same commit too.
 
+### Release tags
+
+Each release is a git tag named `v<plugin version>` (`v0.5.0` for `version` `0.5.0`) on the commit that sets that `version`. The tag is what a consuming project pins ([pinning](#pin-a-marketplace-to-a-release)). The plain `v<version>` form was chosen over Claude Code's `<plugin>--v<version>` convention, which exists for dependents that resolve a plugin version inside a marketplace with several plugins ([host a marketplace](https://code.claude.com/docs/en/plugins/host-marketplace)); this repository's marketplace holds one plugin and nothing depends on it ([ADR 0002](../adr/0002-opt-in-marketplace-pinning-and-release-tags.md)). Use a lightweight tag (`git tag v0.5.0 <sha>`), not an annotated one: with an annotated tag, `codex plugin marketplace upgrade` re-synced the marketplace on every run instead of reporting it up to date (codex-cli 0.162.1, one observed run, see [verification](verification.md#manual-checks-of-host-behaviour)). The maintainer creates and pushes the tag after the version-bump commit is on `main`; agents do not create or push tags.
+
 ## How each Host picks up updates
 
 ### Claude Code
@@ -113,12 +117,31 @@ Why: Claude Code resolves a plugin's version from the manifest `version` first, 
 ### Codex
 
 - Codex follows the git marketplace's ref: an upgrade compares the remote revision of the configured ref with the installed snapshot, activates a new snapshot when they differ, and then reinstalls the configured plugins' cache without comparing `version` ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)).
-- Automatic: Codex starts a marketplace auto-upgrade task at startup when plugins are enabled; a session started in the trusted project upgrades the marketplace (observed in the #33 and #35 notes and relied on by the M5 fix, codex-cli 0.162.1; not rerun for this edit); the interval and opt-out are not established ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up), open question 4).
+- Automatic: Codex starts a marketplace auto-upgrade task at startup when plugins are enabled; a session started in the trusted project upgrades the marketplace (observed in the #33 and #35 notes and relied on by the M5 fix, codex-cli 0.162.1; not rerun for this edit); it runs once per Codex start, with no interval, and a marketplace pinned to a tag or branch `ref` still costs one `git ls-remote` per start, a full-SHA pin none ([#33 note](../research/codex-marketplace-auto-upgrade-2026-10-14.md), codex-cli 0.162.1, source `rust-v0.162.1`). The only off switch is `[features] plugins = false`, which disables all plugin support; do not use it to freeze versions, pin instead ([pinning](#pin-a-marketplace-to-a-release)).
 - Manual: `codex plugin marketplace upgrade <marketplace>`. Where the marketplace is not configured as a git marketplace it fails with ``Error: marketplace `<marketplace>` is not configured as a Git marketplace`` ([research §4](../research/plugin-authoring-both-hosts.md#4-how-updates-are-picked-up)).
 
 ### Version drift
 
 Claude Code updates when the `version` string changes; Codex updates when the marketplace's git ref moves. Commits pushed between two version bumps reach Codex users but not Claude Code users, so the Hosts can briefly run different plugin content. Short drift between releases is expected; bumping `version` with every user-facing change keeps it short.
+
+Unpinned Codex drift closes by itself when all of these hold: the project is trusted; a Codex session starts in the project (drift persists while none does); the process lives until the upgrade finishes (about 2 s, a very short `codex exec` can end first); and the remote revision differs from the one recorded in `.codex-marketplace-install.json` ([#35 note](../research/codex-marketplace-auto-upgrade-project-config-2026-10-14.md), codex-cli 0.162.1, Windows). If it does not close, run `codex plugin marketplace upgrade <marketplace>` from the project. A project that wants Codex to change only on purpose can [pin a release](#pin-a-marketplace-to-a-release) instead.
+
+## Pin a marketplace to a release
+
+Pinning is an opt-in. The default Project setup stays unpinned: Codex follows the branch head, Claude Code follows the manifest `version` ([ADR 0002](../adr/0002-opt-in-marketplace-pinning-and-release-tags.md)). A project that wants both Hosts to change only on purpose pins both to the same [release tag](#release-tags) and moves both pins together per release.
+
+Facts (codex-cli 0.162.1, source `rust-v0.162.1`, verified in an isolated `CODEX_HOME`; details in the [#26 note](../research/codex-marketplace-ref-pinning-2026-10-14.md)):
+
+- Codex: `[marketplaces.<marketplace>]` in a trusted project's `.codex/config.toml` takes `ref`, a branch, tag or full 40-character commit SHA ([Codex config reference](https://developers.openai.com/codex/config-reference)). Never use a short SHA: it is accepted when added, but every later `upgrade` fails with `git ls-remote returned empty output for marketplace source` (#32).
+- A pinned Codex marketplace never updates by itself: `codex plugin marketplace upgrade` and the start-up upgrade do nothing while `ref` is unchanged. Changing `ref` re-syncs the marketplace and the plugin cache at the next start in that project.
+- Claude Code: the marketplace-source `ref` in `extraKnownMarketplaces` takes a branch or tag, not a SHA ([marketplace reference](https://code.claude.com/docs/en/plugins/marketplace-reference), checked 2026-10-14). A pin both Hosts share is therefore a tag. Claude Code still updates a plugin only when its computed `version` differs, so a tag on the version-bump commit is what makes the two Hosts agree.
+- Both pins move together per release (edit `ref` in `.codex/config.toml` and in `.claude/settings.json`), or the Hosts drift. `check-setup` does not yet warn when only one Host pins or the refs differ.
+- A tag pin on Codex was run against a throwaway local git repository (codex-cli 0.162.1): `ref` set to a tag installed that tag's content, and moving `ref` to a later tag, then to a branch, re-synced.
+
+Unverified (labelled so in [verification](verification.md#manual-checks-of-host-behaviour)):
+
+- Two projects with different `ref` values for one marketplace name share one Codex install per `CODEX_HOME` and may re-sync each other back and forth. Not run ([#26 note](../research/codex-marketplace-ref-pinning-2026-10-14.md), open question 3).
+- Claude Code with a tag `ref` and `"autoUpdate": true`: not run, because Claude Code accepts only `owner/repo`, `https://` and `./path` sources and a local tagged repository could not be served without hosting it. Check it once the first release tag exists on `origin`.
 
 ## Test an unreleased change locally
 

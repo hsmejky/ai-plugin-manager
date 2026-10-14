@@ -21,7 +21,21 @@ function checkP3(claude) {
   return fail(
     base,
     `Enabled plugin(s) without a declared marketplace: ${undeclared.join(', ')}`,
-    `Add to ${CLAUDE_SETTINGS} under "extraKnownMarketplaces" an entry for ${names.map((n) => `"${n}"`).join(', ')}, e.g. "${names[0]}": { "source": { "source": "github", "repo": "<owner>/<repo>" } }`,
+    `Add to ${CLAUDE_SETTINGS} under "extraKnownMarketplaces" an entry for ${names.map((n) => `"${n}"`).join(', ')}, e.g. "${names[0]}": { "source": { "source": "github", "repo": "<owner>/<repo>" }, "autoUpdate": true }`,
+  );
+}
+
+function checkP7(claude) {
+  const base = { id: 'P7', host: 'claude', layer: 'project' };
+  if (claude.state !== 'ok') return skip(base, `${CLAUDE_SETTINGS} is missing or unreadable (see P3)`);
+  const declared = [...claude.marketplaces].filter(([name]) => !CLAUDE_BUILTIN.has(name));
+  if (declared.length === 0) return skip(base, 'No marketplace that needs "autoUpdate" is declared');
+  const names = declared.filter(([, m]) => m.autoUpdate !== true).map(([name]) => name);
+  if (names.length === 0) return pass(base, 'Every declared marketplace has "autoUpdate": true');
+  return warn(
+    base,
+    `Marketplace ${names.map((n) => `"${n}"`).join(', ')} has no "autoUpdate": true, so Claude Code does not update its plugins automatically`,
+    `In ${CLAUDE_SETTINGS}, add "autoUpdate": true next to "source" in the "extraKnownMarketplaces" entry ${names.map((n) => `"${n}"`).join(', ')}.`,
   );
 }
 
@@ -115,5 +129,5 @@ function checkP6({ claude, codex }) {
 }
 
 export async function checkPluginDeclarations(env, { decls: decl }) {
-  return [checkP3(decl.claude), checkP4(decl), checkP5(decl), checkP6(decl)];
+  return [checkP3(decl.claude), checkP4(decl), checkP5(decl), checkP6(decl), checkP7(decl.claude)];
 }

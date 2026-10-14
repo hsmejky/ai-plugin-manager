@@ -33,7 +33,7 @@ function buildClaude(json) {
   for (const [id, on] of Object.entries(obj(obj(json).enabledPlugins))) if (on === true) plugins.add(id);
   for (const [name, entry] of Object.entries(obj(obj(json).extraKnownMarketplaces))) {
     const raw = obj(entry).source;
-    marketplaces.set(name, { key: sourceKey(raw), raw });
+    marketplaces.set(name, { key: sourceKey(raw), raw, autoUpdate: obj(entry).autoUpdate });
   }
   return { plugins, marketplaces };
 }

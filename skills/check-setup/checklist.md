@@ -17,7 +17,7 @@ Fix: create `CLAUDE.md` containing the line `@AGENTS.md`, or add that line to th
 ### P3: Claude settings are valid and every enabled plugin's marketplace is declared
 
 Rationale: the expected Shared plugins come from `.claude/settings.json` (`enabledPlugins`). A JSON typo silently disables them, and a plugin whose marketplace is not in `extraKnownMarketplaces` cannot be installed on a fresh machine. The Claude built-in marketplace `claude-plugins-official` is exempt: it needs no declaration. Skip when the file does not exist.
-Fix: repair the JSON, and add `"<marketplace>": { "source": { "source": "github", "repo": "<owner>/<repo>" } }` under `extraKnownMarketplaces`.
+Fix: repair the JSON, and add `"<marketplace>": { "source": { "source": "github", "repo": "<owner>/<repo>" }, "autoUpdate": true }` under `extraKnownMarketplaces`.
 
 ### P4: Codex project config declares the marketplace and the plugin
 
@@ -33,6 +33,12 @@ Fix: enable the plugin in the other Host (Codex table above; Claude `"<plugin>@<
 
 Rationale: a marketplace declared in both Hosts must resolve to the same repository, or the Hosts install different code under one name. Sources are compared after normalisation (Claude `github` + `repo` equals a Codex git URL for the same repository; `.git` suffix, scheme and case are ignored). A source shape that cannot be normalised (for example an unknown `source` type) cannot be compared, and two such sources are never treated as equal: P6 warns that they could not be compared instead of passing. A real difference between two recognised sources is still a fail. Skip when no marketplace is declared in both.
 Fix: set one source in both configs.
+
+### P7: declared Claude marketplaces have `"autoUpdate": true`
+
+Rationale: Claude Code does not auto-update third-party marketplaces unless the entry sets `"autoUpdate": true`, so a project without it stays on an old plugin version while Codex follows the marketplace head (M5 drift). `claude-plugins-official` defaults to on and is exempt. Source: https://code.claude.com/docs/en/settings-reference#extraknownmarketplaces
+Result: warn when an `extraKnownMarketplaces` entry in `.claude/settings.json` has no `"autoUpdate": true` (key missing or `false`); pass otherwise. Skip when the file is missing or unreadable (P3 reports that) or declares no marketplace that needs it.
+Fix: add `"autoUpdate": true` next to `"source"` in the named `extraKnownMarketplaces` entry.
 
 ## Machine setup
 

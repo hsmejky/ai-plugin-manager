@@ -37,7 +37,8 @@ Each finding is `{ id, host, layer, status, message, fix }` with `host` in `clau
 1. One summary line: counts of fail, warn, skip and pass, e.g. "2 fail, 1 warn, 0 skip, 5 pass".
 2. A Markdown table `| Status | Id | Finding | Fix |` per group, in this order and omitting empty
    groups: Claude Code / Project setup, Codex / Project setup, Both Hosts / Project setup,
-   Claude Code / Machine setup, Codex / Machine setup. Show `fix` for warn and fail only.
+   Claude Code / Machine setup, Codex / Machine setup, Both Hosts / Machine setup (`host: both`,
+   `layer: machine`, e.g. M5). Never drop a finding for lack of a group. Show `fix` for warn and fail only.
    Live check findings (`L1`) sit in the Machine setup groups; a `skip` there is a network, auth or
    sandbox limit, not a broken setup, so report its reason as is.
 

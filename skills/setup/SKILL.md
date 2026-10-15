@@ -21,7 +21,8 @@ checking the first one first:
   other two outcomes. If escalation is not possible or the escalated run is blocked too, report that setup
   cannot run in this sandbox and stop. Do not run anything else.
 - **Node.js missing or too old:** the command is not found or not recognized, fails in another way, or the
-  major version is below 20. Report "setup requires Node.js >= 20" and stop. Do not run anything else.
+  major version is below 20. Report "setup requires Node.js >= 20", with the command's error output if it
+  failed, and stop. Do not run anything else.
 - **Node.js 20 or later:** continue with the plan.
 
 ## 2. Plan (read-only)

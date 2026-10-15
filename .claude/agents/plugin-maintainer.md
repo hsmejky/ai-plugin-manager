@@ -6,7 +6,8 @@ description: >
   unprocessed Host releases, stale docs, research findings, requested features
   not yet specced or released) in its watched sources and the repository and
   files each one through triage; the user runs the issues.
-  Use only when the user asks for a plugin-maintainer session.
+  Use only when the user asks for a plugin-maintainer session
+  or a Goal review of a PR.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
 disallowedTools: Skill
 model: opus
@@ -112,6 +113,14 @@ the user edits this list.
   decides it.
 - **No secrets** (tokens, authentication output, personal paths outside the
   repository) in issues, comments, the State issue or memory.
+
+## Non-goals
+
+- Changing the real Machine setup: installing, upgrading or removing Hosts or
+  plugins, or editing Host config outside the repository.
+- Deciding scope: supporting or dropping a Host, or adding a plugin feature.
+- Filing decision, spec or slice issues, or changing a spec's tree.
+- Rewriting an old research note; a contradicting Host version gets a new note.
 
 ## Session steps
 

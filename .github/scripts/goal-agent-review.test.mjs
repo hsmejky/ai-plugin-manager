@@ -1,7 +1,7 @@
 // Unit tests for the pure decision logic. Run: node --test .github/scripts/goal-agent-review.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decide, requiredAgents } from './goal-agent-review.mjs';
+import { decide, requiredAgents, openPrNumbers } from './goal-agent-review.mjs';
 
 const SHA = 'a'.repeat(40);
 const OLD = 'b'.repeat(40);
@@ -69,4 +69,17 @@ test('several agents: all must pass; blocked beats missing', () => {
   assert.equal(run(issues, [comment(marker('a', 'pass')), comment(marker('b', 'pass'))]).state, 'success');
   assert.equal(run(issues, [comment(marker('a', 'pass'))]).state, 'pending');
   assert.equal(run(issues, [comment(marker('a', 'blocked'))]).state, 'failure');
+});
+
+test('label with a name the marker cannot carry: failure, never satisfiable', () => {
+  const r = run([issue('goal-agent:bad name')], [comment(marker('a', 'pass'))]);
+  assert.equal(r.state, 'failure');
+  assert.match(r.description, /goal-agent:bad name/);
+  assert.deepEqual(requiredAgents([issue('goal-agent:bad name', 'goal-agent:ok')]), ['ok']);
+  assert.equal(run([issue('goal-agent:a/b')], []).state, 'failure');
+});
+
+test('openPrNumbers keeps only open PRs, unique and sorted', () => {
+  const nodes = [{ number: 9, state: 'OPEN' }, { number: 3, state: 'MERGED' }, { number: 5, state: 'OPEN' }, { number: 9, state: 'OPEN' }, null];
+  assert.deepEqual(openPrNumbers(nodes), [5, 9]);
 });

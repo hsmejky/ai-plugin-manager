@@ -8,16 +8,34 @@ export const CONTEXT = 'goal-agent-review';
 const TRUSTED = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 const MARKER = /^<!-- goal-agent-review:([A-Za-z0-9._-]+) sha=([0-9a-f]{40}) verdict=(pass|blocked) -->/;
 
-/** Agent names required by the `goal-agent:<name>` labels of the closing issues (`goal-agent:state` excluded). */
-export function requiredAgents(closingIssues) {
+const AGENT_NAME = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * Agent names required by the `goal-agent:<name>` labels of the closing issues (`goal-agent:state` excluded).
+ * Returns { agents, invalid }: `invalid` lists labels whose name the marker could never carry.
+ */
+export function requiredAgentsChecked(closingIssues) {
   const names = new Set();
+  const invalid = new Set();
   for (const issue of closingIssues) {
     for (const label of issue.labels) {
       const m = /^goal-agent:(.+)$/.exec(label);
-      if (m && m[1] !== 'state') names.add(m[1]);
+      if (!m || m[1] === 'state') continue;
+      if (AGENT_NAME.test(m[1])) names.add(m[1]);
+      else invalid.add(label);
     }
   }
-  return [...names].sort();
+  return { agents: [...names].sort(), invalid: [...invalid].sort() };
+}
+
+/** Valid agent names required by the closing issues. */
+export function requiredAgents(closingIssues) {
+  return requiredAgentsChecked(closingIssues).agents;
+}
+
+/** Open PR numbers from a GraphQL `closedByPullRequestsReferences` node list. */
+export function openPrNumbers(nodes) {
+  return [...new Set(nodes.filter((n) => n && n.state === 'OPEN').map((n) => n.number))].sort((a, b) => a - b);
 }
 
 /**
@@ -25,7 +43,10 @@ export function requiredAgents(closingIssues) {
  * Returns { state: 'success' | 'failure' | 'pending', description }.
  */
 export function decide({ closingIssues, comments, headSha, prNumber }) {
-  const agents = requiredAgents(closingIssues);
+  const { agents, invalid } = requiredAgentsChecked(closingIssues);
+  if (invalid.length) {
+    return { state: 'failure', description: `Invalid agent label (name must match [A-Za-z0-9._-]+): ${invalid.join(', ')}` };
+  }
   if (agents.length === 0) return { state: 'success', description: 'No goal-agent issue closed' };
 
   const verdicts = new Map();
@@ -59,23 +80,61 @@ function fetchInputs(repo, prNumber) {
   return { closingIssues, comments, headSha: pr.head.sha, prNumber };
 }
 
-function main() {
+function setStatus(repo, sha, state, description) {
+  gh('api', `repos/${repo}/statuses/${sha}`, '-f', `state=${state}`, '-f', `context=${CONTEXT}`, '-f', `description=${description.slice(0, 140)}`);
+}
+
+function evaluate(repo, prNumber, ctx) {
+  ctx.prNumber = prNumber;
+  ctx.headSha = undefined;
+  const inputs = fetchInputs(repo, prNumber);
+  ctx.headSha = inputs.headSha;
+  const { state, description } = decide(inputs);
+  console.log(`PR #${prNumber} @ ${inputs.headSha}: ${state} (${description})`);
+  setStatus(repo, inputs.headSha, state, description);
+}
+
+/** Open PRs that close the issue (a label change on the issue can change their status). */
+function prsClosing(repo, issueNumber) {
+  const [owner, name] = repo.split('/');
+  const query = `query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){issue(number:$n){
+    closedByPullRequestsReferences(first:50,includeClosedPrs:false){nodes{number state}}}}}`;
+  const gql = JSON.parse(gh('api', 'graphql', '-f', `query=${query}`, '-f', `owner=${owner}`, '-f', `name=${name}`, '-F', `n=${issueNumber}`));
+  return openPrNumbers(gql.data.repository.issue.closedByPullRequestsReferences.nodes);
+}
+
+function main(ctx) {
   const repo = process.env.GITHUB_REPOSITORY;
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
-  let prNumber;
-  if (process.env.GITHUB_EVENT_NAME === 'issue_comment') {
+  const name = process.env.GITHUB_EVENT_NAME;
+  if (name === 'issues') {
+    for (const n of prsClosing(repo, event.issue.number)) evaluate(repo, n, ctx);
+  } else if (name === 'issue_comment') {
     if (!event.issue?.pull_request) {
       console.log('Comment is not on a pull request; nothing to do.');
       return;
     }
-    prNumber = event.issue.number;
+    evaluate(repo, event.issue.number, ctx);
   } else {
-    prNumber = event.pull_request.number;
+    evaluate(repo, event.pull_request.number, ctx);
   }
-  const inputs = fetchInputs(repo, prNumber);
-  const { state, description } = decide(inputs);
-  console.log(`PR #${prNumber} @ ${inputs.headSha}: ${state} (${description})`);
-  gh('api', `repos/${repo}/statuses/${inputs.headSha}`, '-f', `state=${state}`, '-f', `context=${CONTEXT}`, '-f', `description=${description.slice(0, 140)}`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+function run() {
+  const ctx = {};
+  try {
+    main(ctx);
+  } catch (err) {
+    console.error(err);
+    if (ctx.headSha) {
+      try {
+        setStatus(process.env.GITHUB_REPOSITORY, ctx.headSha, 'error', 'Goal review gate error, see run');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    process.exitCode = 1;
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) run();

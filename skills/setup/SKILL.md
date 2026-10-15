@@ -16,8 +16,8 @@ Run `node --version` once without escalation; it usually runs in the sandbox. Te
 checking the first one first:
 
 - **Blocked:** the Host's sandbox or approval policy did not let the command run (for example Codex
-  "blocked by policy" or a sandbox denial such as `spawn EPERM`). If you cannot tell a block from another
-  failure, treat it as blocked. This says nothing about Node.js: never report a Node.js problem here. Ask to
+  "blocked by policy" or a sandbox denial such as `spawn EPERM`). If this first run ran in a sandbox and you
+  cannot tell a block from another failure, treat it as blocked. This says nothing about Node.js: never report a Node.js problem here. Ask to
   run the command outside the sandbox once more (Codex: request escalation; Claude Code: retry it unsandboxed),
   then judge that result by the other two outcomes. If that is not possible or the second run is blocked too,
   report that setup cannot run in this sandbox and stop. Do not run anything else.

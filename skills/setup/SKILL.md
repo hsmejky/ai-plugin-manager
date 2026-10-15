@@ -12,8 +12,19 @@ upgrades a Host and never removes anything ([ADR 0003](../../docs/adr/0003-setup
 
 ## 1. Guard Node.js
 
-Run `node --version`. If the command fails or the major version is below 20, report
-"setup requires Node.js >= 20" and stop. Do not run anything else.
+Run `node --version` once without escalation; it usually runs in the sandbox. Tell three outcomes apart,
+checking the first one first:
+
+- **Blocked:** the Host's sandbox or approval policy did not let the command run (for example Codex
+  "blocked by policy" or a sandbox denial such as `spawn EPERM`). If this first run ran in a sandbox and you
+  cannot tell a block from another failure, treat it as blocked. This says nothing about Node.js: never report a Node.js problem here. Ask to
+  run the command outside the sandbox once more (Codex: request escalation; Claude Code: retry it unsandboxed),
+  then judge that result by the other two outcomes. If that is not possible or the second run is blocked too,
+  report that setup cannot run in this sandbox and stop. Do not run anything else.
+- **Node.js missing or too old:** the command is not found or not recognized, fails in another way, or the
+  major version is below 20. Report "setup requires Node.js >= 20", with the command's error output if it
+  failed, and stop. Do not run anything else.
+- **Node.js 20 or later:** continue with the plan.
 
 ## 2. Plan (read-only)
 

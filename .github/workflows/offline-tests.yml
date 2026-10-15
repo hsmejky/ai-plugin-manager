@@ -33,3 +33,5 @@ jobs:
         run: node --test skills/check-setup/scripts/test/*.test.mjs
       - name: setup skill
         run: node --test skills/setup/scripts/test/*.test.mjs
+      - name: Goal review gate
+        run: node --test .github/scripts/goal-agent-review.test.mjs

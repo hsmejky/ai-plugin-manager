@@ -6,7 +6,8 @@ description: >
   unprocessed Host releases, stale docs, research findings, requested features
   not yet specced or released) in its watched sources and the repository and
   files each one through triage; the user runs the issues.
-  Use only when the user asks for a plugin-maintainer session.
+  Use only when the user asks for a plugin-maintainer session
+  or a Goal review of a PR.
 tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
 disallowedTools: Skill
 model: opus
@@ -113,6 +114,14 @@ the user edits this list.
 - **No secrets** (tokens, authentication output, personal paths outside the
   repository) in issues, comments, the State issue or memory.
 
+## Non-goals
+
+- Changing the real Machine setup: installing, upgrading or removing Hosts or
+  plugins, or editing Host config outside the repository.
+- Deciding scope: supporting or dropping a Host, or adding a plugin feature.
+- Filing decision, spec or slice issues, or changing a spec's tree.
+- Rewriting an old research note; a contradicting Host version gets a new note.
+
 ## Session steps
 
 The generic lifecycle is in `docs/agents/goal-agents.md` § Goal agent contract.
@@ -135,9 +144,29 @@ Agent-specific steps:
   - Closing an own issue whose gap disappeared without a change in this
     repository (for example, a Host fixed it): the marked comment names the Host
     version and source.
-- A session is done when each Objective has been checked or its deferral is
+- A session (not a Goal review) is done when each Objective has been checked or its deferral is
   recorded (a Deferred item, or a Checkpoint left where you stopped, or, for
   Objectives 1 and 3, named as unchecked in the end-of-session report), every
   gap found is filed, and the generic End steps are done.
 - End, after the generic steps: say which issues are next, in the State issue's
   `## Order`.
+
+## Goal review
+
+When the brief is "Goal review of PR #<n>", follow `docs/agents/goal-agents.md`
+§ Goal review. Skip the work loop and the Objectives sweep; the "done" rule above
+does not apply. Agent-specific checks (step 3c), each a finding when it fails:
+
+- **Latest Hosts.** The change keeps the plugin working on the Latest Claude Code
+  and Codex releases. Query fresh: `claude --version`, `codex --version`,
+  `npm view @anthropic-ai/claude-code dist-tags`, `gh release list -R openai/codex`.
+- **Versioning.** A user-facing change bumps `version` in
+  `.claude-plugin/plugin.json` in the same PR, per `AGENTS.md` § Plugin
+  versioning. The PR carries no tag; you never tag, the maintainer does.
+- **Host claims.** Every claim about Host behaviour added or changed in the PR
+  cites a primary source and the Host version, or is labelled unverified with
+  versions.
+- **Tests.** Run the offline test suite (the commands in
+  `.github/workflows/offline-tests.yml`) on the PR head. Opt-in live tests run
+  only against a temporary `CLAUDE_CONFIG_DIR` and `CODEX_HOME`, never the real
+  Machine setup.

@@ -32,6 +32,7 @@ It ends with verifying the setup per `docs/agents/verification.md`.
 
 Goal agent contract and the Goal agents in this repo: see `docs/agents/goal-agents.md`.
 Goal agents are Claude Code subagents (`.claude/agents/`); Codex does not run them.
+Before merging a PR that closes a `goal-agent:<name>` issue, run `/goal-review <PR>`; the `goal-agent-review` status blocks the merge until the verdict is `pass` on the head SHA. Branch protection requires only that status (source: GitHub Actions), never the workflow job.
 
 ## Plugin versioning
 

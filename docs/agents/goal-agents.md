@@ -83,7 +83,8 @@ Start:
    and `autoMemoryEnabled` is false in a settings file, report that memory is
    off and stop. `0` forces memory on.
 3. Find your State issue. None: create it. More than one: stop and ask. A label
-   missing on the tracker: create it only if this file names it.
+   missing on the tracker: see § plugin-maintainer (until its migration),
+   Label creation.
 4. `## Handoff` present: read it, act on it, delete it.
 5. Query tracker facts fresh (open issues in scope, labels, blocking edges);
    never copy them into state.
@@ -122,15 +123,6 @@ End:
 
 ## Goal agents in this repo
 
-| Goal agent | Label | Definition |
-|---|---|---|
-| `plugin-maintainer` | `goal-agent:plugin-maintainer` | `.claude/agents/plugin-maintainer.md` |
-
-`goal-agent:state` labels every Goal agent's State issue. Until its migration,
-`plugin-maintainer` may create its own label with `gh label create` if it is
-missing on the tracker. No other Goal agent creates a label; for them a missing
-label is a blocker to report.
-
 | Goal agent | Label | Home repo |
 |---|---|---|
 | `goal-steward` | `goal-agent:goal-steward` | `hsmejky/goal-steward-home` |
@@ -138,3 +130,18 @@ label is a blocker to report.
 Each Home-repo agent's contract, definition, State issue and memory live in its
 Home repo. A PR whose body closes an issue labelled `goal-agent:<name>` gets a
 Goal review from that agent; the `goal-agent-review` status waits for it.
+
+## plugin-maintainer (until its migration)
+
+This section is not a registry entry. `plugin-maintainer` is not a Home-repo
+agent yet; this section moves with its migration
+([R61](https://github.com/hsmejky/goal-agent/blob/main/docs/goal-agents-with-engineering-skills.md#r61)).
+
+| Goal agent | Label | Definition |
+|---|---|---|
+| `plugin-maintainer` | `goal-agent:plugin-maintainer` | `.claude/agents/plugin-maintainer.md` |
+
+`goal-agent:state` labels every Goal agent's State issue. Label creation: until
+its migration, only `plugin-maintainer` may create a label, and only its own,
+with `gh label create` if it is missing on the tracker. No other Goal agent
+creates a label; for them a missing label is a blocker to report.

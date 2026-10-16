@@ -43,7 +43,7 @@ _Avoid_: Drift, debt
 ## Goal agents
 
 **Goal agent**:
-A subagent definition that owns a long-term goal and works toward it across many sessions, keeping its continuity in durable artifacts (files, issues) rather than in conversation memory. This repo's only Goal agent is `plugin-maintainer`.
+A subagent definition that owns a long-term goal and works toward it across many sessions, keeping its continuity in durable artifacts (files, issues) rather than in conversation memory. This repo has two: `plugin-maintainer`, defined here, and `goal-steward`, which covers this repo from its Home repo `hsmejky/goal-steward-home`.
 _Avoid_: Maintainer (one instance, not the kind), long-running agent
 
 **Objective**:

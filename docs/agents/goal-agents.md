@@ -1,12 +1,20 @@
 # Goal agents
 
-Goal agents are Claude Code subagents; Codex does not run them. This file follows
+A Goal agent lives in its Home repo and runs unattended as a routine; its Home
+repo is the only source of its contract. `goal-steward` runs this way from
+`hsmejky/goal-steward-home`. `plugin-maintainer` is a Claude Code subagent
+(`.claude/agents/`) run in sessions, until its migration (R61); Codex does not
+run it. This file follows
 [Goal agents with the Engineering skills](https://github.com/hsmejky/goal-agent/blob/ce44493c27f14bbb08a68398cf168c289409f034/docs/goal-agents-with-engineering-skills.md);
 why this repo adopted it: [ADR 0004](../adr/0004-plugin-maintainer-follows-the-goal-agent-contract.md).
 
 ## Goal agent contract
 
-Every Goal agent in this repo follows these rules. Tracker commands are in
+Scope (interim, until its migration (R61)): these rules bind `plugin-maintainer`
+only. A Home-repo agent such as `goal-steward` follows the contract in its Home
+repo.
+
+`plugin-maintainer` follows these rules. Tracker commands are in
 `docs/agents/issue-tracker.md` § Goal agent operations.
 
 ### Never write
@@ -143,5 +151,5 @@ agent yet; this section moves with its migration
 
 `goal-agent:state` labels every Goal agent's State issue. Label creation: until
 its migration, only `plugin-maintainer` may create a label, and only its own,
-with `gh label create` if it is missing on the tracker. No other Goal agent
-creates a label; for them a missing label is a blocker to report.
+with `gh label create` if it is missing on the tracker. A Home-repo agent
+follows its Home repo's contract on labels.

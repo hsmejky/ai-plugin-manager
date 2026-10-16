@@ -43,8 +43,8 @@ _Avoid_: Drift, debt
 ## Goal agents
 
 **Goal agent**:
-A subagent definition that owns a long-term goal and works toward it across many sessions, keeping its continuity in durable artifacts (files, issues) rather than in conversation memory. This repo has two: `plugin-maintainer`, defined here, and `goal-steward`, which covers this repo from its Home repo `hsmejky/goal-steward-home`.
-_Avoid_: Maintainer (one instance, not the kind), long-running agent
+An agent that lives in its Home repo, owns a long-term goal and works toward it unattended as a routine across many sessions, keeping its continuity in durable artifacts (files, issues) rather than in conversation memory. `goal-steward` covers this repo from its Home repo `hsmejky/goal-steward-home`. `plugin-maintainer` stays a session-run subagent defined here, until its migration (R61).
+_Avoid_: Maintainer (one instance, not the kind), long-running agent, single-repo or cross-repo Goal agent (there is only one kind)
 
 **Objective**:
 One of the aims a Goal agent's definition lists in ranked order; every issue the Goal agent files serves exactly one Objective.
@@ -59,7 +59,7 @@ Said of a finding too large for one fresh context window, or not verifiable on i
 _Avoid_: Epic, large gap, big issue
 
 **Goal agent contract**:
-The rules every Goal agent follows regardless of repo: how it files issues, marks its output, keeps its State issue, and what it never writes. What varies per repo (which Goal agents exist, their labels, tracker commands) is the repo's configuration, not part of the contract.
+The rules every Goal agent follows regardless of repo: how it files issues, marks its output, keeps its State issue, and what it never writes. A Goal agent's Home repo is the only source of its contract. What varies per Goal agent (its definition, Covered repos and routine) or per Covered repo (which Goal agents cover it and their labels) is configuration, not part of the contract. Here the contract in `docs/agents/goal-agents.md` binds `plugin-maintainer` only, until its migration (R61).
 _Avoid_: Shared contract, Goal agent rules
 
 **State issue**:

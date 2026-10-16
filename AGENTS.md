@@ -31,7 +31,8 @@ It ends with verifying the setup per `docs/agents/verification.md`.
 ### Goal agents
 
 Goal agent contract and the Goal agents in this repo: see `docs/agents/goal-agents.md`.
-Goal agents are Claude Code subagents (`.claude/agents/`); Codex does not run them.
+`goal-steward` runs as a routine from its Home repo. `plugin-maintainer` is a Claude Code
+subagent (`.claude/agents/`) until its migration (R61); Codex does not run it.
 
 - `goal-steward`: Home repo `hsmejky/goal-steward-home`, label `goal-agent:goal-steward`.
 

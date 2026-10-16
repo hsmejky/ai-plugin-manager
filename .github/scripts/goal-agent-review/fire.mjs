@@ -1,7 +1,7 @@
 // The fire mechanism (R37 step 5, reused by the Consultation workflow, R54): POST an agent's routine
 // fire endpoint with one text payload. No GitHub access and no gate logic here.
 // Credentials are repo secrets `GOAL_AGENT_<NAME>_FIRE_TOKEN` and `GOAL_AGENT_<NAME>_TRIGGER_ID`; the
-// workflow hands them over as one JSON object in GOAL_AGENT_SECRETS (`${{ toJSON(secrets) }}`).
+// workflow passes them by name in the step env (never `toJSON(secrets)`: GitHub holds such runs as action_required).
 import { spawnSync } from "node:child_process";
 
 const ENDPOINT = "https://api.anthropic.com/v1/claude_code/routines";
@@ -19,20 +19,10 @@ export function secretName(agent, suffix = "FIRE_TOKEN") {
   return `GOAL_AGENT_${agent.toUpperCase().replaceAll("-", "_")}_${suffix}`;
 }
 
-/** The secrets object from GOAL_AGENT_SECRETS; absent or malformed means no credentials at all. */
-export function secretsFromEnv(env = process.env) {
-  try {
-    const parsed = JSON.parse(env.GOAL_AGENT_SECRETS ?? "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-/** {token, triggerId} for an agent, or null when either is missing (the agent is then never fired). */
-export function credentialsFor(agent, secrets) {
-  const token = secrets[secretName(agent, "FIRE_TOKEN")];
-  const triggerId = secrets[secretName(agent, "TRIGGER_ID")];
+/** {token, triggerId} for an agent from `env`, or null when either is missing or empty (the agent is then never fired). */
+export function credentialsFor(agent, env = process.env) {
+  const token = env[secretName(agent, "FIRE_TOKEN")];
+  const triggerId = env[secretName(agent, "TRIGGER_ID")];
   return token && triggerId ? { token: String(token), triggerId: String(triggerId).trim() } : null;
 }
 

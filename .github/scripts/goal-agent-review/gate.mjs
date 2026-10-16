@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { parseClosingRefs } from "./closing-refs.mjs";
 import { agentNames, CONTEXT, decide, latestVerdict } from "./evaluate.mjs";
 import { ghApi, ghList, GhError } from "./github.mjs";
-import { credentialsFor, fireRoutine, secretsFromEnv } from "./fire.mjs";
+import { credentialsFor, fireRoutine } from "./fire.mjs";
 
 const repoPath = (repo, path) => `repos/${repo}/${path}`;
 
@@ -87,11 +87,10 @@ export function fireMissing(repo, pr, missing, env = process.env) {
   const fired = firedAgents(repo, pr.head.sha);
   const errors = [];
   if (pr.draft) return { fired, errors };
-  const secrets = secretsFromEnv(env);
   const url = pr.html_url ?? `https://github.com/${repo}/pull/${pr.number}`;
   for (const name of missing) {
     if (fired.includes(name)) continue;
-    const creds = credentialsFor(name, secrets);
+    const creds = credentialsFor(name, env);
     if (!creds) continue;
     try {
       fireRoutine({ ...creds, text: url });

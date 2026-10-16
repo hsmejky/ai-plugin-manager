@@ -52,7 +52,8 @@ Used by Goal agents (see `docs/agents/goal-agents.md`). The State issue
 
 - **State label**: `goal-agent:state`. Each Goal agent's scope label is
   `goal-agent:<name>`, listed in `docs/agents/goal-agents.md`.
-- **Create a missing label** (only one named in `goal-agents.md`):
+- **Create a missing label**: who may is set in `docs/agents/goal-agents.md`
+  § plugin-maintainer (until its migration), Label creation. Command:
   `gh label create goal-agent:<name> --description "Scope of the <name> Goal agent"`.
 - **Find the State issue**: `gh issue list --state open --label goal-agent:state --json number,title --jq '.[] | select(.title | contains("<name>"))'`.
   None: create it. More than one: stop and ask.

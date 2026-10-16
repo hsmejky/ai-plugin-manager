@@ -1,0 +1,47 @@
+# Goal review gate (R37). Install in a Covered repo as .github/workflows/goal-agent-review.yml and copy
+# scripts/gate/*.mjs from goal-agent to .github/scripts/goal-agent-review/ (same pin as the Home repo).
+# Trust: pull_request_target only, checks out the default branch, runs nothing from the PR.
+name: Goal agent review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  issue_comment:
+    types: [created, edited, deleted]
+  # A label change re-gates every open PR in this repo that closes the issue.
+  issues:
+    types: [labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  statuses: write
+
+# One group per PR and event kind: a comment run never cancels a pull_request_target run.
+concurrency:
+  group: goal-agent-review-${{ github.event.pull_request.number || github.event.issue.number }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Goal review gate
+    # issue_comment also fires for plain issues; only PR comments matter.
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      # No ref: the default branch for both events, never the PR head.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Evaluate the gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # GOAL_AGENT_<NAME>_FIRE_TOKEN and GOAL_AGENT_<NAME>_TRIGGER_ID per agent; the script reads only those.
+          # toJSON(secrets) hands this step every secret of the repo, because an expression cannot upper-case an
+          # agent name. Nothing from the PR is executed here, so the risk is low; keep the repo's secrets minimal.
+          GOAL_AGENT_SECRETS: ${{ toJSON(secrets) }}
+        run: node .github/scripts/goal-agent-review/gate.mjs

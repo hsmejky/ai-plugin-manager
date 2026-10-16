@@ -33,6 +33,29 @@ It ends with verifying the setup per `docs/agents/verification.md`.
 Goal agent contract and the Goal agents in this repo: see `docs/agents/goal-agents.md`.
 Goal agents are Claude Code subagents (`.claude/agents/`); Codex does not run them.
 
+- `goal-steward`: Home repo `hsmejky/goal-steward-home`, label `goal-agent:goal-steward`.
+
+Consult a Goal agent through a comment on the issue, never by running it:
+
+1. When: `/triage` on any issue first asks each agent's Goal fit, which decides
+   its `goal-agent:<name>` label. On a labelled issue, `/triage`, grilling,
+   `/to-spec` and `/to-tickets` consult only before deciding its scope,
+   Objective, place in the Order or "done when"; `/wayfinder` charting consults
+   on the Destination, on the idea issue or on the new Map before any tickets,
+   and again when the Destination is redrawn. Don't consult when the issue
+   already holds the agent's answer to the same question.
+2. How: post one comment on the issue the skill started from, opening with
+   `> *Question for <name> Goal agent.*`, with numbered questions. The agent
+   answers on the same issue; it only recommends.
+3. While waiting: park that one decision and go on with the others; a
+   background Monitor watches the issue for the answer, timeout about
+   20 minutes. On timeout, the user decides alone; note on the issue that the
+   decision was made without the agent's advice.
+4. Issues created by `/to-spec` or `/to-tickets` from a labelled issue get the
+   same `goal-agent:<name>` label; each ticket's "Done when" goes in its own
+   body. Only the "Done when" in the issue body binds the Goal review; write
+   accepted criteria there.
+
 ## Plugin versioning
 
 Every user-facing change to the plugin (skills, checklist, scripts, manifests) bumps `version` in `.claude-plugin/plugin.json` in the same commit; Claude updates only when that string changes. Tag that commit `v<version>` (for example `v0.5.0`) once it is on `main`; the maintainer creates and pushes the tag, agents never do ([release tags](docs/agents/plugin-authoring.md#release-tags)). Codex follows the marketplace HEAD at each Codex start, or the `ref` of a pinned marketplace ([pinning](docs/agents/plugin-authoring.md#pin-a-marketplace-to-a-release)), and has no manifest here; bump any Codex manifest added later in the same commit.

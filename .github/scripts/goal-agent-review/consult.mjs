@@ -1,10 +1,10 @@
 // The Consultation fire (R54): a question comment from the user's session fires the named agent's routine
 // with the comment URL as the only payload text. Reads only the event file; writes nothing to the tracker.
-// Environment: GITHUB_EVENT_NAME, GITHUB_EVENT_PATH, GOAL_AGENT_SECRETS (see fire.mjs).
+// Environment: GITHUB_EVENT_NAME, GITHUB_EVENT_PATH, GOAL_AGENT_<NAME>_FIRE_TOKEN and _TRIGGER_ID (see fire.mjs).
 // The comment body is untrusted: it is matched here and never reaches a shell.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { credentialsFor, fireRoutine, secretsFromEnv } from "./fire.mjs";
+import { credentialsFor, fireRoutine } from "./fire.mjs";
 
 const TRUSTED = new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 // The comment must open with the marker (R53); agent names are [a-z0-9-]+ (R37).
@@ -23,7 +23,7 @@ export function main(env = process.env) {
   const payload = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH, "utf8"));
   const agent = questionedAgent(env.GITHUB_EVENT_NAME, payload);
   if (!agent) return null;
-  const creds = credentialsFor(agent, secretsFromEnv(env));
+  const creds = credentialsFor(agent, env);
   if (!creds || !payload.comment.html_url) return null; // unknown or uncredentialed name: never fired
   fireRoutine({ ...creds, text: payload.comment.html_url });
   return agent;

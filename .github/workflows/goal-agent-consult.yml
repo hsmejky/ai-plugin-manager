@@ -1,0 +1,40 @@
+# Goal agent Consultation (R54). Install in a Covered repo as .github/workflows/goal-agent-consult.yml; it runs
+# the same copied scripts as the gate (scripts/gate/*.mjs in .github/scripts/goal-agent-review/, same pin).
+# A question comment from an owner, member or collaborator that opens with `> *Question for <name> Goal agent.*`
+# fires that agent's routine with the comment URL. The workflow writes nothing to the tracker; the sweep
+# answers any question a failed or lost fire leaves.
+name: Goal agent consult
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goal-agent-consult-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+jobs:
+  consult:
+    name: Fire the consulted Goal agent
+    # issue_comment also fires for PRs; Consultations live on issues.
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      # No ref: the default branch.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Fire the agent
+        env:
+          # Expressions cannot upper-case an agent name, so the secrets object goes to this one step like the
+          # gate's; the script reads only GOAL_AGENT_<NAME>_FIRE_TOKEN and _TRIGGER_ID of the named agent.
+          # This step can therefore read every secret of the repo. Nothing from the PR is executed here, so the
+          # risk is low; keep the repo's secrets minimal.
+          GOAL_AGENT_SECRETS: ${{ toJSON(secrets) }}
+        run: node .github/scripts/goal-agent-review/consult.mjs

@@ -126,5 +126,15 @@ End:
 |---|---|---|
 | `plugin-maintainer` | `goal-agent:plugin-maintainer` | `.claude/agents/plugin-maintainer.md` |
 
-`goal-agent:state` labels every Goal agent's State issue. Agents may create a
-label from this section with `gh label create` if it is missing on the tracker.
+`goal-agent:state` labels every Goal agent's State issue. Until its migration,
+`plugin-maintainer` may create its own label with `gh label create` if it is
+missing on the tracker. No other Goal agent creates a label; for them a missing
+label is a blocker to report.
+
+| Goal agent | Label | Home repo |
+|---|---|---|
+| `goal-steward` | `goal-agent:goal-steward` | `hsmejky/goal-steward-home` |
+
+Each Home-repo agent's contract, definition, State issue and memory live in its
+Home repo. A PR whose body closes an issue labelled `goal-agent:<name>` gets a
+Goal review from that agent; the `goal-agent-review` status waits for it.

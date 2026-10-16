@@ -151,5 +151,5 @@ agent yet; this section moves with its migration
 
 `goal-agent:state` labels every Goal agent's State issue. Label creation: until
 its migration, only `plugin-maintainer` may create a label, and only its own,
-with `gh label create` if it is missing on the tracker. No other Goal agent
-creates a label; for them a missing label is a blocker to report.
+with `gh label create` if it is missing on the tracker. A Home-repo agent
+follows its Home repo's contract on labels.

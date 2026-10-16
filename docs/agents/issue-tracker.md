@@ -47,10 +47,14 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 
 ## Goal agent operations
 
-Used by Goal agents (see `docs/agents/goal-agents.md`). The State issue
+Scope (interim, until its migration (R61)): these commands bind `plugin-maintainer`
+only. A Home-repo agent such as `goal-steward` follows the operations in its Home
+repo.
+
+Used by `plugin-maintainer` (see `docs/agents/goal-agents.md`). The State issue
 (`goal-agent:state`), like `wayfinder:*` issues, is not triage work.
 
-- **State label**: `goal-agent:state`. Each Goal agent's scope label is
+- **State label**: `goal-agent:state`. The scope label is
   `goal-agent:<name>`, listed in `docs/agents/goal-agents.md`.
 - **Create a missing label**: who may is set in `docs/agents/goal-agents.md`
   § plugin-maintainer (until its migration), Label creation. Command:

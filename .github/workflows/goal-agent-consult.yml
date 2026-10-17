@@ -1,5 +1,6 @@
-# Goal agent Consultation (R54). Install in a Covered repo as .github/workflows/goal-agent-consult.yml; it runs
-# the same copied scripts as the gate (scripts/gate/*.mjs in .github/scripts/goal-agent-review/, same pin).
+# Goal agent Consultation (R54). Install in a Covered repo as .github/workflows/goal-agent-consult.yml. The uses:
+# SHA is the shared goal-agent-pin, the same full 40-hex goal-agent commit as the gate's; the Consultation runs
+# from goal-agent at that commit as a composite action (ADR 0008).
 # A question comment from an owner, member or collaborator that opens with `> *Question for <name> Goal agent.*`
 # fires that agent's routine with the comment URL. The workflow writes nothing to the tracker; the sweep
 # answers any question a failed or lost fire leaves.
@@ -22,18 +23,11 @@ jobs:
     # issue_comment also fires for PRs; Consultations live on issues.
     if: ${{ !github.event.issue.pull_request }}
     runs-on: ubuntu-latest
+    # One step only: the env below reaches every step in this job's action, and no other step may run beside it.
     steps:
-      # No ref: the default branch.
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      - name: Fire the agent
+      - uses: hsmejky/goal-agent/.github/actions/consult@1682c8b412fe63d22e635fa3791580c27abbb8a7
         env:
           # One FIRE_TOKEN/TRIGGER_ID pair per installed Goal agent: installing one adds its pair here. Never use
-          # toJSON(secrets): GitHub holds every run that uses it as action_required.
+          # toJSON(secrets) or secrets: inherit: the action gets only the pairs named here.
           GOAL_AGENT_GOAL_STEWARD_FIRE_TOKEN: ${{ secrets.GOAL_AGENT_GOAL_STEWARD_FIRE_TOKEN }}
           GOAL_AGENT_GOAL_STEWARD_TRIGGER_ID: ${{ secrets.GOAL_AGENT_GOAL_STEWARD_TRIGGER_ID }}
-        run: node .github/scripts/goal-agent-review/consult.mjs
